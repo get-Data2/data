@@ -93,6 +93,15 @@ def cause_hint(gap: tuple[int, int], device_id: str | None, device_minutes: dict
     return "; ".join(hints)
 
 
+def observed_period_min(minutes: set[int]) -> float | None:
+    """값이 있는 분 칸 사이 간격의 중앙값(분). 기대 주기 설정의 근거로 쓴다. 칸이 3개 미만이면 None."""
+    ms = sorted(minutes)
+    if len(ms) < 3:
+        return None
+    diffs = sorted(b - a for a, b in zip(ms, ms[1:]))
+    return float(diffs[len(diffs) // 2])
+
+
 def _dt(epoch_min: float) -> datetime:
     return datetime.fromtimestamp(epoch_min * 60, UTC)
 
@@ -243,14 +252,21 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
 
     # ③ 장치별
     if by in (None, "device"):
-        rows = []
+        rows, mismatch = [], []
         for dev, info in sorted(d.devices.items(), key=lambda kv: (kv[1]["space_id"], kv[0])):
             per = info["expected_period_s"] or 60
+            obs = observed_period_min(d.device_minutes.get(dev, set()))
+            if obs is not None and obs * 60 >= per * 2:
+                mismatch.append(f"`{dev}: {{expected_period_s: {int(obs * 60)}}}`")
             rows.append([dev, info["model"], _space_label(d, info["space_id"]), per,
+                         "—" if obs is None else f"{obs:g}분",
                          f"{d.device_counts.get(dev, 0):,}", kst(info["last_seen"]),
                          _pct(coverage(d.device_minutes.get(dev, set()), s_min, e_min, per))])
         parts += ["", "## ③ 장치별",
-                  _table(["장치", "기종", "공간", "주기(초)", "건수", "마지막 수신", "커버율"], rows)]
+                  _table(["장치", "기종", "공간", "기대 주기(초)", "관측 주기", "건수", "마지막 수신", "커버율"], rows)]
+        if mismatch:
+            parts.append("\n관측 주기가 기대 주기의 2배 이상인 장치 — 실제 주기가 길다면 `config/collector.yaml`의 "
+                         "`devices`에 추가: " + ", ".join(mismatch))
 
     # ④ 빠진 구간
     all_minutes = set().union(*d.device_minutes.values()) if d.device_minutes else set()

@@ -95,3 +95,9 @@ def test_build_report(config):
     assert "실데이터" in text and "공간 미지정(원천 표기 '창고')" in text
     assert "| 실습실(lab) | co2 | 1 | 55 |" in text and "91.7%" in text
     assert "| a | 실습실(lab) |" in text and "5분" in text and "해당 장치만 결측" in text
+
+
+def test_observed_period():
+    from collector.report import observed_period_min
+    assert observed_period_min({S, S + 10, S + 20, S + 31}) == 10
+    assert observed_period_min({S, S + 1}) is None
