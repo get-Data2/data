@@ -149,6 +149,21 @@ class Backfill:
             self._write(dev_rows)
         return {"read": len(rows), "written": len(meas), "devices": len(devs), "skipped": dict(skipped)}
 
+    def _with_network_retry(self, fn, give_up_s: float = 3600):
+        """InfluxDB 망이 끊기면(2026-10-20 실제 발생: 유선망 경로 사라짐) 간격을 늘려 가며 최대 give_up_s 기다린다."""
+        import urllib.error
+        waited, delay = 0.0, 10.0
+        while True:
+            try:
+                return fn()
+            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+                if waited >= give_up_s:
+                    raise
+                log.warning("InfluxDB 접속 실패(%s) — %.0f초 뒤 재시도(누적 대기 %.0f분)", type(e).__name__, delay, waited / 60)
+                time.sleep(delay)
+                waited += delay
+                delay = min(delay * 2, 300)
+
     def _write(self, batch, tries: int = 3):
         for k in range(tries):
             try:
@@ -185,7 +200,7 @@ class Backfill:
         total, skipped = Counter(), Counter()
         t0 = time.monotonic()
         for i, (a, b) in enumerate(todo[:max_chunks] if max_chunks else todo, 1):
-            res = self.load_chunk(a, b, infer)
+            res = self._with_network_retry(lambda: self.load_chunk(a, b, infer))
             self.progress["done"][a.isoformat()] = {"stop": b.isoformat(), **res}
             self._save()
             total.update({"read": res["read"], "written": res["written"]})
