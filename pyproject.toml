@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "team2-collector"
+version = "0.1.0"
+description = "MQTT 센서 수집기 (과제 1)"
+requires-python = ">=3.12"
+dependencies = [
+  "paho-mqtt>=2.1",
+  "PyMySQL>=1.1",
+  "PyYAML>=6.0",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "amqtt==0.12.*"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+collector = ["schema.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'unit or broker' -q"
+markers = [
+  "unit: 오프라인 단위 테스트",
+  "broker: 보드 안 amqtt 시험 브로커 사용",
+  "mysql: 실 MySQL(test_ 접두사 테이블) 사용",
+  "live: 실 MQTT 브로커 사용",
+]

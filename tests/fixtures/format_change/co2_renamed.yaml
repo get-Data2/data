@@ -1,0 +1,3 @@
+# 대응 1: 항목 별칭에 새 필드 이름을 더한다 (config/collector.yaml items.co2)
+items:
+  co2: {unit: ppm, aliases: [co2, co2_ppm]}

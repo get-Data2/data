@@ -1,0 +1,12 @@
+# 대응 2: 새 원천 규칙 + 새 공간 + 새 항목 별칭 (config/collector.yaml에 덧붙임)
+spaces_add:
+  - {id: lounge, name: 라운지, kind: lounge, aliases: [라운지]}
+items:
+  temperature: {unit: degC, aliases: [temperature, current_temperature, temp_c]}
+sources_add:
+  - name: labv2
+    topic: lab/v2/+/telemetry
+    device_id: dev
+    space: room
+    measurements: data
+    time: [at]

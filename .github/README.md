@@ -10,7 +10,7 @@
 
 | 과제 | 상태 | 계획(spec) | 코드 |
 |---|---|---|---|
-| 1. 데이터 수집 체계 | 🟡 설계 완료, 구현 전 | [001-data-collection](https://github.com/get-Data2/data-docs/tree/main/specs/001-data-collection) | `src/collector/` |
+| 1. 데이터 수집 체계 | 🟢 상시 수집 중 (2026-10-20~), 24h 보고·재부팅 시험 남음 | [001-data-collection](https://github.com/get-Data2/data-docs/tree/main/specs/001-data-collection) | `src/collector/` |
 | 2. 데이터 이해와 기준선 | ⚪ 대기 | — | — |
 | 3. 60분 예측 | ⚪ 대기 | — | — |
 | 4. 이상 탐지 | ⚪ 대기 | — | — |
@@ -18,6 +18,16 @@
 | 6. 사전학습 모델 비교 | ⚪ 대기 | — | — |
 | 7. 엣지 최적화 | ⚪ 대기 | — | — |
 | 8. 상시 추론 서비스 | ⚪ 대기 | — | — |
+
+## 빠른 사용 (과제 1 수집기)
+
+```bash
+~/.local/bin/uv pip install --python .venv/bin/python -e '.[test]'
+.venv/bin/python -m collector check-config         # 설정 검증
+deploy/install.sh                                  # 상시 서비스 설치(systemd 사용자 서비스 + linger)
+.venv/bin/python -m collector report --hours 24    # 수집 현황(커버율·빠진 구간·원인 단서)
+.venv/bin/python -m pytest                         # 단위 + 시험 브로커 (-m mysql / -m live 별도)
+```
 
 ## 구조
 

@@ -1,0 +1,65 @@
+# 수집기 설정 — 형식 변경·센서 추가·공간 변경은 이 파일만 고친다.
+# 형식 설명: specs/001-data-collection/contracts/config.md (data-docs 저장소)
+# 반영: systemctl --user reload team2-collector  (검증 실패 시 기존 설정 유지)
+version: 1
+
+spaces:                      # 공간 매핑: id는 이후 과제의 토픽·API 경로에 쓰이므로 바꾸지 않는다
+  - {id: lab,           name: 실습실,     kind: classroom, aliases: [실습실]}
+  - {id: office,        name: 사무실,     kind: office,    aliases: [사무실]}
+  - {id: office_out,    name: 사무실 밖,  kind: outdoor,   aliases: [사무실 밖]}
+  - {id: ceo_room,      name: 대표실,     kind: office,    aliases: [대표실]}
+  - {id: dev_room,      name: 개발실,     kind: office,    aliases: [개발실]}
+  - {id: meeting,       name: 회의실,     kind: meeting,   aliases: [회의실]}
+  - {id: focus_meeting, name: 집중회의실, kind: meeting,   aliases: [집중회의실]}
+  - {id: plant,         name: 공용 설비,  kind: plant,     aliases: [controller]}
+
+devices:                     # 장치 단위 덮어쓰기(태그가 틀리거나 비었을 때, 주기가 다를 때)
+  24e124785c389818: {space: lab}          # 태그에 spot이 없는 장치 — 공간을 명시해 둔다
+  # 24e124xxxxxxxxxx: {expected_period_s: 600}
+  # 24e124yyyyyyyyyy: {enabled: false}
+
+items:                       # 표준 항목 이름: 단위 + 원천 필드 별칭
+  co2:                {unit: ppm,  aliases: [co2]}
+  temperature:        {unit: degC, aliases: [temperature, current_temperature]}
+  humidity:           {unit: "%",  aliases: [humidity, current_humidity]}
+  pressure:           {unit: hPa}
+  tvoc:               {unit: ppb}
+  battery:            {unit: "%"}
+  power:              {unit: bool}
+  target_temperature: {unit: degC}
+
+sources:
+  - name: chirpstack
+    topic: application/+/device/+/event/up
+    device_id: deviceInfo.devEui
+    device_name: deviceInfo.deviceName
+    model: deviceInfo.deviceProfileName
+    space: deviceInfo.tags.location
+    spot: deviceInfo.tags.spot
+    measurements: object              # 이 사전의 숫자·참거짓 필드를 모두 측정값으로
+    time: ["min(rxInfo[*].nsTime)"]     # 게이트웨이 시계(time)는 5분 빠를 수 있어 쓰지 않는다
+    source_time: time
+    frame_cnt: fCnt
+
+  - name: xflow
+    topic: xflow/hvacr/+/+/status
+    also_topics: [xflow/controller/+/status]
+    device_id: "topic[-2]"
+    device_name: values.*.$key
+    model: "topic[-3]"
+    space: split(values.*.$key, "-", 0)
+    measurements: values.*
+    time: [ts]
+    source_time: ts
+
+ignore_topics:
+  - gateway/+/state/#
+
+timing:
+  max_future_s: 120
+  max_past_s: 3600
+
+mqtt:    {keepalive_s: 30, reconnect_max_s: 30, stale_reconnect_s: 300, qos: 1, client_id: team2-jetson-collector-a1}
+storage: {table_prefix: "", batch_rows: 1000, flush_interval_s: 2}
+spool:   {path: var/spool.db, max_rows: 400000}
+report:  {stale_after_s: 600, gap_min_minutes: 2}

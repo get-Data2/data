@@ -1,0 +1,21 @@
+# systemd 사용자 서비스 — deploy/install.sh가 @ROOT@를 프로젝트 경로로 바꿔 설치한다.
+[Unit]
+Description=team2 MQTT 센서 수집기 (과제 1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@ROOT@
+Environment=PYTHONUNBUFFERED=1
+# 잠금 파일로 cron 감시 스크립트와 동시에 돌지 않게 한다
+ExecStart=/usr/bin/flock -n @ROOT@/var/collector.lock @ROOT@/.venv/bin/python -m collector run
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Restart=always
+RestartSec=5
+MemoryMax=256M
+
+[Install]
+WantedBy=default.target
