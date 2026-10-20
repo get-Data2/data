@@ -17,6 +17,11 @@ spaces:                      # 공간 매핑: id는 이후 과제의 토픽·API
 devices:                     # 장치 단위 덮어쓰기(태그가 틀리거나 비었을 때, 주기가 다를 때)
   24e124785c389818: {space: lab}          # 태그에 spot이 없는 장치 — 공간을 명시해 둔다
   dev001: {enabled: false}                # InfluxDB의 시험 행(location=lab, 2건)
+  # 기대 보고 주기 — 2026-06-22~07-22 실측 간격 중앙값(과제 2 spec "기록 주기와 결측"). 나머지는 기본 60초
+  24e124126d152590: {expected_period_s: 120}   # EM500-CO2 실습실 전방 좌측(122초)
+  24e124126d152862: {expected_period_s: 120}   # EM500-CO2 실습실 후방 우측(122초)
+  24e124128c140101: {expected_period_s: 600}   # AM107 실습실 전방 우측(600초)
+  24e124725d089152: {expected_period_s: 600}   # AM103 회의실(600초)
   # 24e124xxxxxxxxxx: {expected_period_s: 600}
   # 24e124yyyyyyyyyy: {enabled: false}
 
