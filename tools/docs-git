@@ -1,0 +1,4 @@
+#!/bin/sh
+# 계획·문서 저장소(get-Data2/data-docs) 전용 git. 사용: tools/docs-git status | add -A | commit | push
+root=$(cd "$(dirname "$0")/.." && pwd)
+exec git --git-dir="$root/.git-docs" --work-tree="$root" "$@"
