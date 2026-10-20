@@ -26,7 +26,7 @@ def test_resolve_space_order(config):
     assert config.resolve_space("other", "실습실") == ("lab", "alias")
     assert config.resolve_space("other", " 사무실 밖 ") == ("office_out", "alias")
     assert config.resolve_space("other", "controller") == ("plant", "alias")
-    assert config.resolve_space("other", "창고") == (UNMAPPED, "none")
+    assert config.resolve_space("other", "보일러실") == (UNMAPPED, "none")
     assert config.resolve_space("other", None) == (UNMAPPED, "none")
 
 
@@ -48,7 +48,7 @@ def bad(raw, mutate):
 
 def test_bad_space_id(raw):
     msg = bad(raw, lambda r: r["spaces"].append({"id": "Lab 2", "name": "x", "kind": "office"}))
-    assert "x.yaml: spaces[8].id" in msg
+    assert "x.yaml: spaces[9].id" in msg
 
 
 def test_duplicate_alias(raw):

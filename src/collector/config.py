@@ -23,6 +23,8 @@ DEFAULTS: dict[str, dict[str, Any]] = {
     "storage": {"table_prefix": "", "batch_rows": 1000, "flush_interval_s": 2},
     "spool": {"path": "var/spool.db", "max_rows": 400000},
     "report": {"stale_after_s": 600, "gap_min_minutes": 2},
+    "backfill": {"bucket": "iot-bucket", "measurements": [], "chunk_hours": 24,
+                 "progress_path": "var/backfill_progress.json", "batch_rows": 5000},
 }
 
 
@@ -84,6 +86,7 @@ class Config:
     storage: dict[str, Any]
     spool: dict[str, Any]
     report: dict[str, Any]
+    backfill: dict[str, Any]
     _alias_space: dict[str, str] = field(default_factory=dict, repr=False)
     _alias_item: dict[str, str] = field(default_factory=dict, repr=False)
 

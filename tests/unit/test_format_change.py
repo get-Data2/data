@@ -63,6 +63,6 @@ def test_new_device_auto_mapped_and_unknown_unmapped(config):
     now = datetime.now(timezone.utc)
     r = parse("application/a/device/new-dev/event/up", json.dumps(p).encode(), now, config)
     assert r.measurements[0]["space_id"] == "lab"
-    p["deviceInfo"]["tags"]["location"] = "창고"
+    p["deviceInfo"]["tags"]["location"] = "보일러실"
     r = parse("application/a/device/new-dev/event/up", json.dumps(p).encode(), now, config)
     assert r.measurements[0]["space_id"] == "unmapped" and r.devices[0]["mapped_by"] == "none"

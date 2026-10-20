@@ -88,6 +88,15 @@ def write_batch(conn, prefix: str, batch: list[tuple[str, dict]]) -> None:
                     "last_seen=GREATEST(last_seen, VALUES(last_seen))",
                     [tuple(r.get(c) for c in _DEV_COLS) for r in rows],
                 )
+            if rows := by_kind.get("device_seen"):
+                # 과거 데이터 적재용: 없는 장치는 새로 넣고, 있는 장치는 수신 기간만 넓힌다(현재 공간은 그대로)
+                cols = ",".join(_DEV_COLS)
+                cur.executemany(
+                    f"INSERT INTO `{prefix}device` ({cols}) VALUES ({','.join(['%s'] * len(_DEV_COLS))}) "
+                    "ON DUPLICATE KEY UPDATE first_seen=LEAST(first_seen, VALUES(first_seen)), "
+                    "last_seen=GREATEST(last_seen, VALUES(last_seen))",
+                    [tuple(r.get(c) for c in _DEV_COLS) for r in rows],
+                )
             if rows := by_kind.get("event"):
                 cur.executemany(
                     f"INSERT INTO `{prefix}collector_event` (ts, kind, detail, host) VALUES (%s,%s,%s,%s)",

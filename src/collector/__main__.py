@@ -51,6 +51,26 @@ def cmd_replay(args, cfg):
     print(replay(cfg, args.file, args.limit))
 
 
+def cmd_backfill(args, cfg):
+    import logging
+    from datetime import datetime
+    from .backfill import Backfill
+    from .influx import InfluxReader
+    from .timeutil import KST, UTC
+    logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s %(message)s")
+    try:
+        reader = InfluxReader(args.env, cfg.backfill["bucket"])
+    except Exception as e:
+        print(f"InfluxDB 접속 실패: {type(e).__name__}: {e}", file=sys.stderr)
+        sys.exit(EXIT_EXTERNAL)
+    conn = _connect(args)
+
+    def day(s):
+        return datetime.strptime(s, "%Y-%m-%d").replace(tzinfo=KST).astimezone(UTC) if s else None
+    bf = Backfill(cfg, reader, conn, cfg.storage["table_prefix"])
+    print(bf.run(start=day(args.start), end=day(args.end), max_chunks=args.max_chunks, dry_run=args.dry_run))
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m collector", description="MQTT 센서 수집기")
     p.add_argument("--config", default="config/collector.yaml")
@@ -76,6 +96,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--capacity", action="store_true", help="저장소 크기·1년 추정")
     s.add_argument("--prefix", default=None)
     s.set_defaults(func=cmd_report)
+
+    s = sub.add_parser("backfill", help="InfluxDB 과거 데이터 적재(조회 전용, 재개 가능)")
+    s.add_argument("--start", help="시작 날짜 KST YYYY-MM-DD (기본: InfluxDB 첫 데이터)")
+    s.add_argument("--end", help="끝 날짜 KST YYYY-MM-DD (기본: 수집기 첫 수신 시각)")
+    s.add_argument("--max-chunks", type=int, default=None, help="이번 실행에서 처리할 구간 수 상한")
+    s.add_argument("--dry-run", action="store_true", help="범위만 보여 주고 적재하지 않음")
+    s.set_defaults(func=cmd_backfill)
 
     s = sub.add_parser("replay", help="메시지 파일을 해석만 해 보기(저장 안 함)")
     s.add_argument("--file", required=True)

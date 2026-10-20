@@ -82,7 +82,7 @@ def test_build_report(config):
     d.devices = {
         "a": {"device_id": "a", "model": "EM500-CO2", "space_id": "lab", "raw_location": "실습실",
               "mapped_by": "alias", "expected_period_s": 60, "last_seen": last},
-        "z": {"device_id": "z", "model": "?", "space_id": "unmapped", "raw_location": "창고",
+        "z": {"device_id": "z", "model": "?", "space_id": "unmapped", "raw_location": "보일러실",
               "mapped_by": "none", "expected_period_s": 60, "last_seen": last},
     }
     mins = set(range(S, E)) - set(range(S + 20, S + 25))
@@ -92,7 +92,7 @@ def test_build_report(config):
     d.series = {("lab", "co2"): {"count": len(mins), "last": last, "devices": 1}}
     d.stats_minutes = set(range(S, E))
     text = build_report(d, config, now=end)
-    assert "실데이터" in text and "공간 미지정(원천 표기 '창고')" in text
+    assert "실데이터" in text and "공간 미지정(원천 표기 '보일러실')" in text
     assert "| 실습실(lab) | co2 | 1 | 55 |" in text and "91.7%" in text
     assert "| a | 실습실(lab) |" in text and "5분" in text and "해당 장치만 결측" in text
 
