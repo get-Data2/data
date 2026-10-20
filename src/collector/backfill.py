@@ -208,6 +208,11 @@ class Backfill:
             rate = total["written"] / max(time.monotonic() - t0, 1e-6)
             log.info("[%d/%d] %s %s행 적재, 건너뜀 %s (누적 %s행, %.0f행/초)", i, len(todo),
                      kst(a, "%Y-%m-%d"), f"{res['written']:,}", res["skipped"] or 0, f"{total['written']:,}", rate)
+        remaining = [a for a, b in chunks
+                     if self.progress["done"].get(a.isoformat(), {}).get("stop") != b.isoformat()]
+        if not remaining:
+            self.progress_path.with_name("backfill_done").write_text(datetime.now(UTC).isoformat())
+            log.info("모든 구간 적재 완료 — 완료 표시 파일을 남김(타이머가 더 돌지 않음)")
         return summarize(self.progress, head)
 
 
