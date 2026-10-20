@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS {p}collector_event (
   kind   VARCHAR(32)  NOT NULL,
   detail VARCHAR(512) NULL,
   host   VARCHAR(64)  NOT NULL,
-  KEY ix_ts (ts)
+  KEY ix_event_ts (ts)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS {p}ingest_stats (
