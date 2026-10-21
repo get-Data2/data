@@ -1,0 +1,66 @@
+# 과제 5 상태 추정 설정 — 정답·특징·후보·임계값 규칙은 여기만 고친다.
+# 형식: specs/005-state-estimation/contracts/config.md (data-docs 저장소)
+version: 1
+analysis_config: config/analysis.yaml
+split: v1-provisional
+inputs:
+  series: var/series/space_5min.parquet
+  norm: var/eval/norm_v1-provisional.json
+  booking_estimated: var/forecast/booking_estimated.parquet
+  booking_file: null                 # 실제 예약 CSV(space_id,start,end, KST). 있으면 추정 예약 대신 사용
+  forecast_bundle: var/forecast/bundle
+  observations: data/observations.csv   # 사람 기록, git 제외
+spaces: [lab, office, meeting]
+
+labels:
+  occupancy:
+    # 2026-10-21 결정: 회의실 실제 예약 기록 없음 → 회의실은 일정 기반 정답을 만들지 않고 직접 관찰로만 판정한다.
+    # 추정 예약(booking_estimated)은 CO₂에서 만들어 사용 여부 정답으로 쓰면 순환이다.
+    meeting_source: none               # none | booking_estimated | booking_file
+  vent:
+    threshold_ppm: 1000
+    horizon_min: 30
+    min_future_obs: 0.5              # (t, t+30분] 관측 비율 하한, 미만이면 판단 불가
+
+observe:
+  timezone: Asia/Seoul
+  live_start: "2026-10-20"           # 실시간 수집 시작(KST). 관찰은 이 날 이후만
+  boundaries: ["09:00", "11:30", "13:00", "18:00"]
+  boundary_window_min: 30
+  door_devices:                      # 출입문 WS301(research R3): 관찰 기록 점검용으로만(정답·입력 아님). config/collector.yaml 장치
+    office: [24e124141d189196]
+    lab: [24e124141d180806, 24e124141d189796]
+  target:                            # 목표량(2026-10-21 사용자 결정)
+    class_days_per_space: 2
+    total_hours: 20
+    boundary_visits_per_space: 4     # 09:00·11:30·13:00·18:00 ±30분
+    meeting: {meetings: 2, empty_hours: 2}
+
+features:
+  window_min: 30
+  min_input_obs: 0.5
+  groups:
+    occupancy: [level, delta, shape, obs]                    # time·schedule 금지(설정 검증)
+    vent: [level, delta, shape, obs, time, schedule]
+    leak: [level, delta, shape, obs, time, schedule]          # 누수 비교 실험 전용(사용 여부 + 일정)
+
+models:
+  candidates:
+    hgb: {max_depth: [3, 6, null], learning_rate: [0.05, 0.1, 0.2], class_weight: balanced}
+    logreg: {C: [0.1, 1.0, 10.0], class_weight: balanced}
+    mlp: {hidden: [32, 64], layers: 2, epochs: 30, class_weight: balanced}
+  seeds: [0, 1, 2]
+
+selection:
+  occupancy: {metric: macro_f1, threshold: max_macro_f1}
+  vent: {metric: macro_f1, threshold: {min_recall: 0.85, then: max_precision}}
+  tie_rule: simpler_within_1sd      # logreg < hgb < mlp
+
+rules:
+  occupancy: {window_min: 15, rise_ppm: 30}
+  vent: {co2_ppm: 850}
+
+advanced:
+  unseen_space: true
+  noshow: {after_start_min: 15}
+  unbooked: {min_minutes: 15}

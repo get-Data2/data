@@ -8,3 +8,4 @@ var/
 .pytest_cache/
 
 /.git-docs/
+data/
