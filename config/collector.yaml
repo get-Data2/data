@@ -31,6 +31,9 @@ devices:                     # 장치 단위 덮어쓰기(태그가 틀리거나
   24e124141d229577: {periodic: false, expected_period_s: 64800}   # 창고 입구
   24e124141d180806: {periodic: false, expected_period_s: 64800}   # 실습실 앞문(과거 데이터에서만 확인)
   24e124141d189796: {periodic: false, expected_period_s: 64800}   # 실습실 뒷문(과거 데이터에서만 확인)
+  # 냉난방 실내기(xflow idu)는 꺼져 있으면 power만 매분 보내고, 켜져 있을 때만 온도·설정 온도 등을 보낸다(2026-10-21 실측:
+  # 집중회의실 실내기 24시간 power 1,441건, 온도는 13:06 잠깐 켰을 때 1건) → 온도 등은 조건부 항목, 커버율 판정 제외
+  8b519f28-d521-4a7a-a9d3-874bee333d3e: {periodic_items: [power]}   # 집중회의실 실내기
   # 24e124xxxxxxxxxx: {expected_period_s: 600}
   # 24e124yyyyyyyyyy: {enabled: false}
 

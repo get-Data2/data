@@ -50,6 +50,7 @@ class DeviceOverride:
     expected_period_s: int | None = None
     enabled: bool = True
     periodic: bool = True          # False: 사건이 있을 때만 보내는 센서(문 열림 등) — 커버율·결측 판정에서 뺀다
+    periodic_items: tuple | None = None   # 이 항목만 주기적으로 보냄(예: 꺼진 실내기는 power만). 나머지 항목은 조건부 — 커버율 판정 제외
 
 
 @dataclass(frozen=True)
@@ -114,9 +115,13 @@ class Config:
         ov = self.devices.get(device_id)
         return (ov.expected_period_s if ov and ov.expected_period_s else 60)
 
-    def is_periodic(self, device_id: str) -> bool:
+    def is_periodic(self, device_id: str, item: str | None = None) -> bool:
         ov = self.devices.get(device_id)
-        return ov.periodic if ov else True
+        if not ov:
+            return True
+        if item is not None and ov.periodic_items is not None:
+            return ov.periodic and item in ov.periodic_items
+        return ov.periodic
 
     def all_topics(self) -> list[str]:
         out = []
@@ -199,10 +204,14 @@ def build_config(raw: Any, path: str = "<설정>") -> Config:
         per = d.get("expected_period_s")
         if per is not None and (not isinstance(per, int) or per <= 0):
             errs.append(f"{where}.expected_period_s: 양의 정수여야 함")
-        unknown = set(d) - {"space", "expected_period_s", "enabled", "periodic"}
+        unknown = set(d) - {"space", "expected_period_s", "enabled", "periodic", "periodic_items"}
         if unknown:
             errs.append(f"{where}: 알 수 없는 키 {sorted(unknown)}")
-        devices[str(did)] = DeviceOverride(sp, per, bool(d.get("enabled", True)), bool(d.get("periodic", True)))
+        pi = d.get("periodic_items")
+        if pi is not None and (not isinstance(pi, list) or not all(isinstance(x, str) for x in pi)):
+            errs.append(f"{where}.periodic_items: 항목 이름 목록이어야 함")
+        devices[str(did)] = DeviceOverride(sp, per, bool(d.get("enabled", True)), bool(d.get("periodic", True)),
+                                           tuple(pi) if pi is not None else None)
 
     # items
     items: dict[str, ItemDef] = {}

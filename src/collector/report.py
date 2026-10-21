@@ -238,10 +238,12 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
         return (d.devices.get(dev) or {}).get("expected_period_s") or 60
 
     def series_period(key):
-        pers = [period(x) for x in d.space_item_devices.get(key, ()) if cfg.is_periodic(x)]
+        pers = [period(x) for x in d.space_item_devices.get(key, ()) if cfg.is_periodic(x, key[1])]
         return min(pers) if pers else 60
     covs = {k: coverage(m, s_min, e_min, series_period(k)) for k, m in d.space_item_minutes.items()}
-    core = {k: v for k, v in covs.items() if k[1] in ("co2", "temperature", "humidity")}
+    # 주기적으로 보내는 장치가 하나도 없는 공간·항목(사건형·조건부)은 커버율 판정에서 뺀다
+    judged = {k for k in covs if any(cfg.is_periodic(x, k[1]) for x in d.space_item_devices.get(k, ()))}
+    core = {k: v for k, v in covs.items() if k[1] in ("co2", "temperature", "humidity") and k in judged}
     if core:
         low = sorted((v, k) for k, v in core.items() if v < 0.95)
         parts.append(f"- 핵심 항목(co2·temperature·humidity) 공간별 커버율 최저 {_pct(min(core.values()))}, "
@@ -285,8 +287,9 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
     if by in (None, "space"):
         rows = []
         for (sid, item), st in sorted(d.series.items(), key=lambda kv: (kv[0][0], kv[0][1])):
+            cov = _pct(covs.get((sid, item), 0.0))
             rows.append([_space_label(d, sid), item, st["devices"], f"{st['count']:,}", kst(st["last"]),
-                         _pct(covs.get((sid, item), 0.0))])
+                         cov if (sid, item) in judged else f"{cov}(조건부·판정 제외)"])
         parts += ["", "## ② 공간·항목별", _table(["공간", "항목", "장치 수", "건수", "마지막 수신", "커버율"], rows)]
 
     # ③ 장치별
