@@ -1,0 +1,76 @@
+# 과제 8 상시 추론 서비스 설정 — 주기·신선도·묶음·경보·발행·API는 여기만 고친다.
+# 형식: specs/008-inference-service/contracts/config.md (data-docs 저장소). 공개 저장소이므로 내부 주소·비밀을 쓰지 않는다.
+version: 1
+analysis_config: config/analysis.yaml      # 공통 전처리 규칙(축 A·칸·중앙값·일과표)
+collector_config: config/collector.yaml    # 장치 기대 주기·사건형 여부(끊김 판정)
+spaces: [lab, office, meeting]
+
+cycle:
+  offset_s: 20                 # 매분 이 초에 시작
+  window_h: 5                  # 메모리 창(가장 긴 입력 4시간 + 여유)
+  late_min: 10                 # 늦게 도착한 행 보정
+  db_timeout_s: 10
+  watchdog_cycles: 3           # 연속 진행 없음 → 종료(→ systemd 재시작)
+
+freshness:
+  stale_min: 15                # 초과 시 stale 표시, 이상 판단 보류
+  stop_min: 60                 # 초과 시 예측 중단(unavailable: data_gap)
+
+bundles:
+  forecast: var/forecast/bundle
+  anomaly: var/anomaly/bundle
+  state: var/state/bundle
+  edge_selection: var/edgeopt/runtime/runtime.json   # 과제 7 결과(없으면 PyTorch)
+  supported_input_spec: [1]
+
+thresholds:
+  co2_ppm: 1000
+
+rules:                         # 규칙 경보(과제 4 규칙 파라미터와 같은 기본값)
+  data_gap_min: 10             # 끊김 = 마지막 수신이 max(이 값, 기대 주기 × 2)보다 오래됨(과제 1 기준)
+  stuck: {min_hours: 1.0, others_min_change: {co2: 50, temperature: 1.0, humidity: 3}}
+  out_of_range_recent_min: 15  # 최근 이 시간 안의 축 A 오류(범위 밖·오류 코드) 장치
+
+alerts:
+  renotify_min: 30
+  clear_after: 3
+  roles:                       # 과제 4 운영 제안과 같은 역할 이름
+    sensor_fault: 센서 관리 담당
+    equipment_fault: 시설 담당
+    air_quality: 공간 사용자
+
+mqtt:
+  target: local                # 2026-10-21 결정: 보드 로컬 브로커(B안). 공용 MQTT 서버에는 발행하지 않는다
+  topic_prefix: team2/inference/v1
+  qos: 1
+  local: {host: 127.0.0.1, port: 11883}     # 서비스는 같은 보드 브로커에 발행. 브로커는 0.0.0.0:11883에서 받아 다른 팀이 보드 주소로 구독
+  client_id: team2-jetson-inference-a1
+  user_env: INFER_MQTT_USER    # 발행 계정 이름·비밀번호는 .env의 이 키에서 읽는다(값은 출력하지 않음)
+  pass_env: INFER_MQTT_PASS
+
+broker:                        # deploy/wonil-broker.service가 쓰는 보드 로컬 브로커 설정
+  bind: 0.0.0.0
+  port: 11883
+  publish_topics: ["team2/inference/v1/#"]   # 발행 계정만, 이 토픽만. 익명은 구독만
+
+api:
+  bind: 0.0.0.0
+  port: 18080                  # 2026-10-21 결정: 흔한 8080을 피함(보드를 다른 계정과 공유). 시작 시 사용 중이면 알림
+  max_minutes: 60
+
+records:
+  db_tables_prefix: svc_
+  spool: var/service/spool.db
+  dir: var/service             # 주기 기록(cycles.jsonl)·경보 상태(state.json)·예측 기록
+  keep_days: {forecast_log: 30, others: 90}
+
+selfmonitor:                   # 심화 2
+  window_h: 24
+  drift_factor: 2.0            # 이동 MAE > 과제 3 시험 MAE × 2 → model_drift
+
+control_sim:                   # 심화 1
+  start_when: [ventilation_soon, co2_over_30min]
+  stop_below_ppm: 800
+  stop_hold_min: 30
+  outdoor_ppm: 450
+  speedup_k: [2, 3]            # 환기 시 감쇠 시간 상수 1/k

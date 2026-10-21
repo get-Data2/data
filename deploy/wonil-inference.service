@@ -1,0 +1,23 @@
+# systemd 사용자 서비스 — deploy/install-inference.sh가 @ROOT@를 프로젝트 경로로 바꿔 설치한다.
+# 상시 추론 서비스(과제 8): 매분 예측·이상·상태 계산, 조회 API(18080), 로컬 브로커 발행.
+# tools/infer는 이 프로세스에 GPU 그룹(video·render)이 없으면 sg로 다시 실행한다(그룹이 사용자 관리자에 반영되기 전 대비).
+[Unit]
+Description=wonil 상시 추론 서비스 (과제 8)
+After=network-online.target wonil-broker.service
+Wants=network-online.target wonil-broker.service
+
+[Service]
+Type=simple
+WorkingDirectory=@ROOT@
+Environment=PYTHONUNBUFFERED=1 CUBLAS_WORKSPACE_CONFIG=:4096:8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+ExecStart=@ROOT@/tools/infer run
+# SIGHUP → 모델 묶음 다시 적재(서비스 재시작 없음)
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGTERM
+TimeoutStopSec=60
+Restart=always
+RestartSec=10
+MemoryMax=1536M
+
+[Install]
+WantedBy=default.target

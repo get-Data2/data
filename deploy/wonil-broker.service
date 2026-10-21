@@ -1,0 +1,20 @@
+# systemd 사용자 서비스 — deploy/install-inference.sh가 @ROOT@를 프로젝트 경로로 바꿔 설치한다.
+# 보드 로컬 MQTT 브로커(과제 8 결과 발행용). 0.0.0.0:11883, 익명은 구독만, 발행은 .env의 INFER_MQTT_USER만.
+[Unit]
+Description=wonil 로컬 MQTT 브로커 (과제 8 결과 발행)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@ROOT@
+Environment=PYTHONUNBUFFERED=1
+ExecStart=@ROOT@/.venv/bin/python -m service.broker
+KillSignal=SIGTERM
+TimeoutStopSec=15
+Restart=always
+RestartSec=5
+MemoryMax=128M
+
+[Install]
+WantedBy=default.target
