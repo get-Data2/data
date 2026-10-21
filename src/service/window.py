@@ -23,6 +23,9 @@ class DbSource:
     def _connect(self):
         from collector import store
         self._conn = store.connect(self.env_path)
+        # 읽기 전용이라도 자동 커밋을 켠다. 끄면(과제 1 기본) 첫 SELECT의 트랜잭션 스냅샷(REPEATABLE READ)에
+        # 갇혀 이후 주기가 새 행을 못 본다(2026-10-21 끊김 오경보로 발견).
+        self._conn.autocommit(True)
         timeout = int(self.cfg["cycle"]["db_timeout_s"])
         with self._conn.cursor() as cur:
             cur.execute(f"SET SESSION MAX_EXECUTION_TIME={timeout * 1000}")

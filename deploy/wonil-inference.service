@@ -12,7 +12,7 @@ WorkingDirectory=@ROOT@
 Environment=PYTHONUNBUFFERED=1 CUBLAS_WORKSPACE_CONFIG=:4096:8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 ExecStart=@ROOT@/tools/infer run
 # SIGHUP → 모델 묶음 다시 적재(서비스 재시작 없음)
-ExecReload=/bin/kill -HUP $MAINPID
+ExecReload=@ROOT@/tools/infer reload
 KillSignal=SIGTERM
 TimeoutStopSec=60
 Restart=always

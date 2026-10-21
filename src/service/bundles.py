@@ -93,16 +93,22 @@ class ForecastRunner:
 
     def predict(self, past: np.ndarray, fut: np.ndarray, space: str, current: np.ndarray) -> np.ndarray:
         """past (L, n_past), fut (H, n_future), current (2,) 원값 → (H, 2) 원값."""
+        return self.predict_many(past[None], fut[None], [space], current[None])[0]
+
+    def predict_many(self, past: np.ndarray, fut: np.ndarray, spaces: list[str], current: np.ndarray) -> np.ndarray:
+        """여러 시점을 한 번에(재생·시뮬레이션용). past (N, L, n_past), fut (N, H, n_future), current (N, 2) → (N, H, 2)."""
         import torch
-        mu, sd = self.mu_sd(space)
+        ms = [self.mu_sd(s) for s in spaces]
+        mu = np.stack([m[0][:2] for m in ms])
+        sd = np.stack([m[1][:2] for m in ms])
         d = self.device
-        b = {"past": torch.as_tensor(past[None], device=d), "future": torch.as_tensor(fut[None], device=d),
-             "space": None, "current": torch.as_tensor(current[None].astype(np.float32), device=d),
-             "mu": torch.as_tensor(mu[None, :2], device=d), "sd": torch.as_tensor(sd[None, :2], device=d),
+        b = {"past": torch.as_tensor(past, device=d), "future": torch.as_tensor(fut, device=d),
+             "space": None, "current": torch.as_tensor(current.astype(np.float32), device=d),
+             "mu": torch.as_tensor(mu, device=d), "sd": torch.as_tensor(sd, device=d),
              "age_step": 5 / 60 / self.age_cap, "target_kind": self.exp.target}
         if self.spec["space_onehot"]:
-            oh = np.zeros((1, len(self.spaces)), np.float32)
-            oh[0, self.spaces.index(space)] = 1
+            oh = np.zeros((len(spaces), len(self.spaces)), np.float32)
+            oh[np.arange(len(spaces)), [self.spaces.index(s) for s in spaces]] = 1
             b["space"] = torch.as_tensor(oh, device=d)
         with torch.no_grad():
             out = self.model(b)
@@ -110,7 +116,7 @@ class ForecastRunner:
             y = b["current"][:, None] + out * b["sd"][:, None]
         else:
             y = b["mu"][:, None] + out * b["sd"][:, None]
-        return y[0].cpu().numpy()
+        return y.cpu().numpy()
 
 
 def load_forecast(cfg, device) -> Loaded:

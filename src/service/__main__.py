@@ -7,11 +7,13 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import signal
 import subprocess
 import sys
 import time
 import urllib.request
+from pathlib import Path
 
 import pandas as pd
 
@@ -63,9 +65,13 @@ def cmd_run(args, cfg):
     signal.signal(signal.SIGTERM, lambda *_: svc.stop())
     signal.signal(signal.SIGINT, lambda *_: svc.stop())
     signal.signal(signal.SIGHUP, lambda *_: svc.request_reload())
+    pidfile = _pidfile(cfg)
+    pidfile.parent.mkdir(parents=True, exist_ok=True)
+    pidfile.write_text(str(os.getpid()))
     try:
         svc.run()
     finally:
+        pidfile.unlink(missing_ok=True)
         api.stop()
         pub.stop()
         svc.rec.stop()
@@ -90,7 +96,8 @@ def cmd_status(args, cfg):
         return EXIT_NOSERVICE
     lc = h.get("last_cycle") or {}
     print(f"상태 {h['status']}, 장치 {h.get('device')}, 메모리 {h.get('rss_mb')}MB, MQTT 접속 {h.get('mqtt_connected')}")
-    print(f"마지막 주기 {lc.get('scheduled_at')} {lc.get('status')} {lc.get('total_ms')}ms, 누적 {h.get('cycles')}")
+    ms = lc.get("total_ms") or sum(lc.get(k) or 0 for k in ("read_ms", "prep_ms", "infer_ms", "publish_ms"))
+    print(f"마지막 주기 {lc.get('scheduled_at')} {lc.get('status')} {ms}ms, 누적 {h.get('cycles')}")
     for k, v in (h.get("judgements") or {}).items():
         print(f"  {k}: {v}")
     return 0
@@ -124,10 +131,20 @@ def cmd_selftest(args, cfg):
     return 0
 
 
+def _pidfile(cfg):
+    return Path(cfg["records"]["dir"]) / "infer.pid"
+
+
 def cmd_reload(args, cfg):
-    r = subprocess.run(["systemctl", "--user", "kill", "-s", "HUP", "wonil-inference"], capture_output=True, text=True)
-    print("묶음 다시 적재 신호 보냄" if r.returncode == 0 else f"실패: {r.stderr.strip()}")
-    return 0 if r.returncode == 0 else EXIT_NOSERVICE
+    """HUP은 파이썬 프로세스에만 보낸다. 서비스 전체(cgroup)에 보내면 앞단 sg 셸이 HUP으로 끝나 서비스가 재시작된다."""
+    try:
+        pid = int(_pidfile(cfg).read_text())
+        os.kill(pid, signal.SIGHUP)
+    except (OSError, ValueError) as e:
+        print(f"실패: 실행 중인 서비스 없음({type(e).__name__}) — `systemctl --user restart wonil-inference`")
+        return EXIT_NOSERVICE
+    print(f"묶음 다시 적재 신호 보냄(pid {pid}) — 다음 주기에 적재, `infer status`로 확인")
+    return 0
 
 
 def cmd_fault_test(args, cfg):
@@ -151,8 +168,37 @@ def cmd_fault_test(args, cfg):
 
 
 def cmd_simulate(args, cfg):
-    print("심화 1(제어 규칙 시뮬레이션)은 과제 3 예측 묶음이 생긴 뒤 구현한다(specs/008 tasks T035).")
-    return EXIT_DATA
+    from .control_sim import run, to_markdown
+    try:
+        res = run(cfg, _device(args), days=args.days)
+    except RuntimeError as e:
+        print(e)
+        return EXIT_DATA
+    md = to_markdown(res)
+    print(md)
+    if args.md:
+        open(args.md, "w", encoding="utf-8").write(md + "\n")
+        print(f"→ {args.md}")
+    if args.csv:
+        out = {}
+        for sp, (df, sims) in res["_frames"].items():
+            w = pd.concat(sims, axis=1)
+            w.columns = [f"{a}.{b}" for a, b in w.columns]
+            out[sp] = w.join(df[["pred30_max", "pred60"]])
+        pd.concat(out, names=["space_id"]).to_csv(args.csv)
+        print(f"→ {args.csv}")
+    return 0
+
+
+def cmd_skew(args, cfg):
+    from .skew import run, to_markdown
+    df = run(cfg, _device(args), days=args.days)
+    md = to_markdown(df, args.days)
+    print(md)
+    if args.md:
+        open(args.md, "w", encoding="utf-8").write(md + "\n")
+        print(f"→ {args.md}")
+    return 0
 
 
 def main(argv=None) -> int:
@@ -172,6 +218,11 @@ def main(argv=None) -> int:
     sub.add_parser("reload")
     p = sub.add_parser("simulate-control")
     p.add_argument("--days", type=int, default=7)
+    p.add_argument("--md")
+    p.add_argument("--csv")
+    p = sub.add_parser("skew-test", help="전처리 불일치 실험(부분 칸·채우기·정규화)")
+    p.add_argument("--days", type=int, default=3)
+    p.add_argument("--md")
     p = sub.add_parser("fault-test")
     p.add_argument("target")
     p.add_argument("--minutes", type=float, default=10)
@@ -182,7 +233,7 @@ def main(argv=None) -> int:
         print(e)
         return EXIT_CONFIG
     return {"run": cmd_run, "once": cmd_once, "status": cmd_status, "report": cmd_report, "selftest": cmd_selftest,
-            "reload": cmd_reload, "simulate-control": cmd_simulate, "fault-test": cmd_fault_test}[args.cmd](args, cfg)
+            "reload": cmd_reload, "simulate-control": cmd_simulate, "fault-test": cmd_fault_test, "skew-test": cmd_skew}[args.cmd](args, cfg)
 
 
 if __name__ == "__main__":

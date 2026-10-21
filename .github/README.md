@@ -17,7 +17,7 @@
 | 5. 상태 추정 | ⚪ 대기 | — | — |
 | 6. 사전학습 모델 비교 | ⚪ 대기 | — | — |
 | 7. 엣지 최적화 | ⚪ 대기 | — | — |
-| 8. 상시 추론 서비스 | ⚪ 대기 | — | — |
+| 8. 상시 추론 서비스 | 🟡 상시 가동 중(2026-10-21~), 12시간 기록 진행 — [산출물](https://github.com/get-Data2/data-docs/tree/main/docs/deliverables/task8) · [점검](https://github.com/get-Data2/data-docs/blob/main/docs/tasks/task8-inference-service.md) | [008-inference-service](https://github.com/get-Data2/data-docs/tree/main/specs/008-inference-service) | `src/service/`, `src/preprocess/` |
 
 ## 빠른 사용 (과제 1 수집기)
 
@@ -39,6 +39,19 @@ deploy/install.sh                                  # 상시 서비스 설치(sys
 ~/.local/bin/uv pip install --python .venv/bin/python -e '.[test,analysis]'
 analysis all          # MySQL → 사본 → 정제 → 분할 → 사건 → 기준선 → 진단서 (약 4분, 산출물 docs/deliverables/task2/)
 analysis info         # 파일·해시 상태(기준선과 평가 시점 일치 확인)
+```
+
+## 빠른 사용 (과제 8 상시 추론 서비스)
+
+서비스 `wonil-inference`(추론)와 `wonil-broker`(보드 로컬 MQTT 브로커)는 systemd 사용자 서비스다. 결과 형식은 data-docs의 결과 형식 문서를 본다.
+
+```bash
+deploy/install-inference.sh                         # 두 서비스 설치·시작(재부팅 시 자동 시작)
+infer status                                        # 판단별 가용(forecast·anomaly·state), 메모리, MQTT 접속
+curl -s "http://<팀 Jetson 주소>:18080/v1/spaces/meeting/forecast?minutes=30"   # 회의실 30분 뒤 CO₂·온도
+mosquitto_sub -h <팀 Jetson 주소> -p 11883 -t 'team2/inference/v1/#' -v         # 새 구독자도 최신값(보존 메시지)
+infer reload                                        # 새 모델 묶음 적용(재시작 없음)
+infer report --from "2026-10-21 20:20"              # 가동 요약(주기·처리 시간·경보·장애 시험)
 ```
 
 ## 구조

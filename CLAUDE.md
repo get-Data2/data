@@ -51,3 +51,6 @@
 - [x] 과제 2 데이터 이해와 기준선 — 완료(2026-10-21). 분할 `v1-provisional`이 과제 3~6 공식 평가 기준(`var/eval/eval_points_v1-provisional.parquet`).
   `v2-final`(2학기 시험)은 InfluxDB 적재 후 추가 비교(선택). 산출물 `docs/deliverables/task2/`, 점검 `docs/tasks/task2-data-baseline.md`
 - [ ] 과제 3 60분 예측 — spec·plan 완료(2026-10-21). GPU(Orin, torch cu130) 사용, 그룹 미반영 세션은 `sg video`/`sg render`. 계획 `specs/003-forecast-60min/`
+- [ ] 과제 8 상시 추론 서비스 — 상시 가동 중(`wonil-inference` + 보드 브로커 `wonil-broker` :11883, API :18080, CLI `infer`).
+  장애 시험·API·결과 형식 문서·심화 2개 완료(2026-10-21). 남은 것: 12시간 표(10-22 08:25 자동 생성 → `docs/deliverables/task8/tables/02-12h-run.md`로 산출물 ② 마무리), 재부팅 실측(사용자 일정).
+  서비스 DB 읽기는 **자동 커밋 필수**(끄면 REPEATABLE READ 스냅샷에 갇혀 새 행을 못 봄). 모델 교체는 `infer reload`(PID 파일로 파이썬에만 HUP)
