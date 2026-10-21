@@ -36,7 +36,7 @@
 | `docs/` | 문서(아래 하위 폴더). 첫 화면 `docs/README.md` |
 | `docs/deliverables/taskN/` | **산출물만**(README 각 과제의 "산출물" 항목: 보고서·표·그래프). 목차 `docs/deliverables/README.md` |
 | `docs/tasks/taskN-*.md` | **과제별 점검 문서**. README의 해결할 것·확인 기준·생각해 볼 점·심화(B)를 항목마다 대응시키고 결과·측정 조건·해석을 채운다. 산출물 본문은 넣지 않고 `deliverables/`로 연결. **기능별 확인 명령(명령·입력 위치·정상 결과)**을 실제로 실행해 맞춘 뒤 적는다. 과제를 마칠 때 반드시 갱신 |
-| `docs/ops/`, `docs/advanced/`, `docs/reports/` | 운영 가이드 / 심화(B) 결과 / 측정·작업 기록(자동 생성 상세 표 포함) |
+| `docs/ops/`, `docs/advanced/taskN/`, `docs/reports/` | 운영 가이드 / 심화(B) 결과 / 측정·작업 기록(자동 생성 상세 표 포함) |
 | `var/` | 실행 산출물(스풀·로그), git 제외 |
 
 ## Git (작업 폴더 하나, 저장소 둘)
