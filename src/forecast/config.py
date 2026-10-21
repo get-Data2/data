@@ -94,13 +94,19 @@ class ForecastConfig:
             return [ref] + [replace(ref, train_spaces=tuple(s for s in spaces if s != out)) for out in spaces]
         grid = self.raw["stages"][stage]
         keys = list(grid)
+        ev = dict((self.raw.get("stage_eval") or {}).get(stage) or {})   # 비교만 이 값으로(예: D3 반복 예측은 2시간 입력)
         out = []
         for combo in itertools.product(*(grid[k] for k in keys)):
             kw = {}
             for k, v in zip(keys, combo):
                 kw[k] = tuple(v) if isinstance(v, list) else v
-            out.append(replace(base, **kw))
+            out.append(replace(base, **(ev | kw)))
+        if stage == "B1" and base.hash not in {c.hash for c in out}:
+            out.append(base)        # 앞 단계(D1~D4)에서 고른 설정도 최종 후보에 넣는다(예: 과거 하루)
         return out
+
+    def stage_keys(self, stage: str) -> list[str]:
+        return list(self.raw["stages"].get(stage, {}))
 
 
 def load_forecast_config(path: str | Path = "config/forecast.yaml") -> ForecastConfig:

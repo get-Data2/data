@@ -63,7 +63,7 @@ def stage_table(ctx, stage: str) -> pd.DataFrame:
                      "파라미터": f"{recs[0]['params']:,}" if recs else "—",
                      "학습 시간(초)": _f(np.mean([r["train_seconds"] for r in recs]), 0) if recs else "—",
                      "에폭(최고)": f"{np.mean([r['epochs'] for r in recs]):.0f}({np.mean([r['best_epoch'] for r in recs]):.0f})" if recs else "—",
-                     "선택": "◀" if c["hash"] == st.get("picked_hash") else ""})
+                     "선택": "◀" if c["hash"] == st.get("picked_eval_hash", st.get("picked_hash")) else ""})
     return pd.DataFrame(rows)
 
 

@@ -1,0 +1,58 @@
+# 과제 4 이상 탐지 설정 — 주입 규칙·탐지기·임계값·운영 제안은 여기만 고친다.
+# 형식: specs/004-anomaly-detection/contracts/config.md (data-docs 저장소)
+version: 1
+analysis_config: config/analysis.yaml
+split: v1-provisional
+inputs:
+  sensor_series: var/series/sensor_5min.parquet
+  events: var/cache/events.parquet
+  stuck: var/cache/stuck.parquet
+  forecast_bundle: var/forecast/bundle
+spaces:                                  # 탐지 대상 공간과 제외 장치
+  lab: {exclude_devices: []}
+  office: {exclude_devices: []}
+  meeting: {exclude_devices: []}
+items: [co2, temperature, humidity]
+
+inject:
+  seed: 42
+  per_kind: 12
+  min_gap_h: 12
+  usage: {start: "09:00", end: "18:00"}   # F4·F5 시작 가능 시간(수업일)
+  F1: {co2: [400, 1500], temperature: [3, 8], humidity: [10, 30]}       # 더할 크기(부호 무작위)
+  F2: {hours: [1, 4]}                                                  # 장치 전 항목 고정
+  F3: {hours: [3, 8], ppm: [200, 500], persist_h: 24}
+  F4: {hours: [2, 4], celsius: [3, 5]}
+  F5: {hours: [2, 4], factor: 1.8, baseline: {start: "07:00", end: "08:00"}}
+
+autoencoder:
+  window: 12                             # 5분 × 12 = 1시간
+  score_tail: 3                          # 창 끝 3칸 오차로 점수
+  channels: 32
+  bottleneck: 8
+  seeds: [0]
+  train: {lr: 0.001, batch: 512, max_epochs: 40, patience_stop: 6}
+  exclude_events: [B0]                   # 학습 제외(값 고정 후보는 stuck.parquet로 항상 제외)
+
+rules:
+  spike: {k: 8, floor: {co2: 10, temperature: 0.1, humidity: 1.0}}
+  stuck: {min_hours: 1.0, alone_hours: 2.0, others_min_change: {co2: 50, temperature: 1.0, humidity: 3}}
+
+drift:                                   # 심화 2
+  night: {weekday_hours: ["02:00", "05:00"], low_quantile: 0.1, night_delta: 80}
+  peer: {window_h: 2, k: 6}
+
+forecast_err:                            # 심화 1
+  horizon_min: 15
+
+alarms:
+  merge_min: 30
+  target_per_day: 0.5                    # 검증 기간 하루당 경보(전체 공간 합) 목표
+  q_candidates: {min: 0.99, max: 0.99999, n: 40}
+  match_slack_min: 30
+  F3_match_h: 24
+
+operations:                              # 운영 제안의 알림 대상(역할)
+  sensor_fault: 센서 관리 담당
+  equipment_fault: 시설 담당
+  air_quality: 공간 사용자

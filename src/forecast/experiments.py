@@ -144,8 +144,13 @@ def run_stage(ctx: Context, stage: str, retry_failed=False, log=print) -> dict:
              "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     if stage in PICK_STAGES:
         chosen, why = pick(cands, stats)
-        entry |= {"picked": chosen.key(), "picked_label": chosen.label(), "picked_hash": chosen.hash, "reason": why}
-        log(f"[{stage}] 선택: {chosen.label()} ({why})")
+        picked = chosen
+        if stage != "B1":
+            # 이 단계가 바꾸는 값만 앞 단계 선택에 적용한다(비교용 덮어쓰기 stage_eval은 넘기지 않음)
+            picked = replace(base, **{k: getattr(chosen, k) for k in ctx.cfg.stage_keys(stage)})
+        entry |= {"picked": picked.key(), "picked_label": picked.label(), "picked_hash": picked.hash,
+                  "picked_eval_hash": chosen.hash, "reason": why}
+        log(f"[{stage}] 선택: {picked.label()} ({why})")
     st = load_stages(ctx)
     st[stage] = entry
     stages_path(ctx).parent.mkdir(parents=True, exist_ok=True)

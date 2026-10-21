@@ -142,3 +142,24 @@ def test_failed_run_does_not_stop(fcfg, tmp_path, monkeypatch):
     monkeypatch.setattr(ex, "train_one", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("메모리 부족")))
     recs = train_exp(ctx, replace(fcfg.defaults(), seeds=(0, 1)), log=lambda *_: None)
     assert [r["status"] for r in recs] == ["failed", "failed"]
+
+
+def test_stage_eval_override_and_b1_includes_prior(fcfg):
+    """D3은 비교만 2시간 입력으로 하고, B1 후보에는 앞 단계 선택(예: 과거 하루)이 들어간다."""
+    base = replace(fcfg.defaults(), lookback_min=1440)
+    d3 = fcfg.stage_candidates("D3", base)
+    assert {c.lookback_min for c in d3} == {120} and {c.output for c in d3} == {"direct", "recursive"}
+    b1 = fcfg.stage_candidates("B1", base)
+    assert base.hash in {c.hash for c in b1} and len(b1) == 10
+
+
+def test_d3_pick_keeps_prior_lookback(fcfg, tmp_path):
+    series = synth_series()
+    cfg, ev = small_cfg(fcfg, tmp_path, series)
+    cfg.raw["stage_eval"] = {"D3": {"lookback_min": 30}}
+    ctx = ctx_for(cfg, series, ev, tmp_path / "fc")
+    for st in ("D0", "D1", "D2", "D3"):
+        run_stage(ctx, st, log=lambda *_: None)
+    s = load_stages(ctx)["D3"]
+    assert s["picked"]["lookback_min"] == 60                   # 앞 단계(D1) 선택 유지
+    assert all(c["key"]["lookback_min"] == 30 for c in s["candidates"])

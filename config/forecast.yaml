@@ -47,6 +47,8 @@ stages:                              # 단계마다 바꿀 값(앞 단계 선택
   D3: {output: [direct, recursive]}
   D4: {target: [delta, value]}
   B1: {lookback_min: [60, 120, 240], model: [gru, lstm, tcn]}   # 곱집합 9개
+stage_eval:                          # 비교할 때만 쓰는 값. 고른 값(output 등)만 앞 단계 선택에 적용된다
+  D3: {lookback_min: 120}            # 반복 예측은 12번 굴려 계산이 12배 — 과거 하루 입력이면 실행당 수 시간(2026-10-21 실측 기반)
 selection:
   metric: val_norm_mae               # 정규화 MAE 평균(공간 × 항목 × 지평)
   tie_rule: simpler_within_1sd       # 씨앗 1표준편차 안이면 단순한 쪽
