@@ -51,12 +51,10 @@ def stuck(w: pd.DataFrame, cfg, acfg) -> pd.DataFrame:
         refs = [r for r in w.columns if split_col(r)[1] == item and split_col(r)[0] != dev]
         v = w[c].dropna()
         for a, b in _runs_constant(v, mh):
-            if refs:
-                seg = w.loc[a:b, refs]
+            # 참조 장치가 있어도 그 구간에 관측이 없으면 참조 없음으로 본다(2026-10-21 수정: 전에는 건너뛰어 놓침)
+            med = w.loc[a:b, refs].median(axis=1).dropna() if refs else pd.Series(dtype=float)
+            if len(med):
                 # 참조 장치들의 중앙값이 고정 구간 안에서 기준 이상 변했나(처음 성립 시각)
-                med = seg.median(axis=1).dropna()
-                if med.empty:
-                    continue
                 rng_ = (med.cummax() - med.cummin())
                 ok = rng_[(rng_ >= p["others_min_change"][item]) & (rng_.index >= a + mh)]
                 if len(ok):

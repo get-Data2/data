@@ -13,7 +13,7 @@
 | 1. 데이터 수집 체계 | 🟢 완료·상시 수집 중 (2026-10-20~), 24h 최종표만 남음 — [산출물](https://github.com/get-Data2/data-docs/tree/main/docs/deliverables/task1) · [점검](https://github.com/get-Data2/data-docs/blob/main/docs/tasks/task1-data-collection.md) | [001-data-collection](https://github.com/get-Data2/data-docs/tree/main/specs/001-data-collection) | `src/collector/` |
 | 2. 데이터 이해와 기준선 | 🟢 완료 — 분할 `v1`이 과제 3~6 평가 기준 — [산출물](https://github.com/get-Data2/data-docs/tree/main/docs/deliverables/task2) · [점검](https://github.com/get-Data2/data-docs/blob/main/docs/tasks/task2-data-baseline.md) | [002-data-baseline](https://github.com/get-Data2/data-docs/tree/main/specs/002-data-baseline) | `src/analysis/` |
 | 3. 60분 예측 | 🟢 완료 — 실습실 CO₂ 60분 53% 개선 — [산출물](https://github.com/get-Data2/data-docs/tree/main/docs/deliverables/task3) · [점검](https://github.com/get-Data2/data-docs/blob/main/docs/tasks/task3-forecast-60min.md) | [003-forecast-60min](https://github.com/get-Data2/data-docs/tree/main/specs/003-forecast-60min) | `src/forecast/` |
-| 4. 이상 탐지 | ⚪ 대기 | — | — |
+| 4. 이상 탐지 | 🟡 탐지 86.7% ✅ / 헛경보 4.65회/일 ❌ — [산출물](https://github.com/get-Data2/data-docs/tree/main/docs/deliverables/task4) · [점검](https://github.com/get-Data2/data-docs/blob/main/docs/tasks/task4-anomaly-detection.md) | [004-anomaly-detection](https://github.com/get-Data2/data-docs/tree/main/specs/004-anomaly-detection) | `src/anomaly/` |
 | 5. 상태 추정 | ⚪ 대기 | — | — |
 | 6. 사전학습 모델 비교 | ⚪ 대기 | — | — |
 | 7. 엣지 최적화 | ⚪ 대기 | — | — |

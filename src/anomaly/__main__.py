@@ -76,6 +76,19 @@ def cmd_evaluate(args, cfg):
     return 0
 
 
+def cmd_adaptive(args, cfg):
+    """헛경보 대응 실험: 최근 N일 점수로 매일 다시 잡는 적응 임계값(src/anomaly/adaptive.py)."""
+    from .adaptive import run, run_scaled
+    work = _work(cfg)
+    out = {}
+    for n in args.ref_days:
+        out[f"quantile_{n}"] = run(work, args.detector, n)
+        out[f"scaled_{n}"] = run_scaled(work, args.detector, n)
+    (work.root / "adaptive.json").write_text(json.dumps(out, ensure_ascii=False, indent=1, default=str))
+    print(f"→ {work.root / 'adaptive.json'}")
+    return 0
+
+
 def cmd_report(args, cfg):
     from .report import write_reports
     for p in write_reports(_work(cfg)):
@@ -114,6 +127,9 @@ def main(argv=None) -> int:
         sub.add_parser(c)
     p = sub.add_parser("score")
     p.add_argument("detectors", nargs="*")
+    p = sub.add_parser("adaptive", help="적응 임계값 실험(최근 N일 점수 기준)")
+    p.add_argument("--detector", default="ae")
+    p.add_argument("--ref-days", type=int, nargs="+", default=[7, 14, 28])
     args = ap.parse_args(argv)
     if not hasattr(args, "detectors"):
         args.detectors = None
@@ -123,7 +139,7 @@ def main(argv=None) -> int:
         print(e)
         return EXIT_CONFIG
     return {"check": cmd_check, "inject": cmd_inject, "train": cmd_train, "score": cmd_score, "threshold": cmd_threshold,
-            "evaluate": cmd_evaluate, "report": cmd_report, "info": cmd_info, "all": cmd_all}[args.cmd](args, cfg)
+            "evaluate": cmd_evaluate, "report": cmd_report, "info": cmd_info, "all": cmd_all, "adaptive": cmd_adaptive}[args.cmd](args, cfg)
 
 
 if __name__ == "__main__":

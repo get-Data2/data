@@ -86,3 +86,15 @@ def test_combine_union():
     b = alarms_from(pts("lab", [10, 200], 0.999, "B/co2"), 0.99, 30)
     c = combine([a, b], 30)
     assert len(c) == 2 and c.iloc[0]["cause"] == "B/co2"
+
+
+def test_adaptive_quantile_is_causal():
+    """적응 임계값: 그 날 분위수는 이전 날 점수로만 정해진다(뒤에 큰 점수가 와도 앞날 q가 그대로)."""
+    from anomaly.adaptive import rolling_points
+    t = pd.date_range("2026-06-01", periods=288 * 10, freq="5min", tz="Asia/Seoul").tz_convert("UTC")
+    base = pd.DataFrame({"space_id": "lab", "t": t, "score": np.random.default_rng(0).random(len(t)), "cause": "D/co2"})
+    late = base.copy()
+    late.loc[late.index[-288:], "score"] = 1e6
+    a, b = rolling_points(base, 3), rolling_points(late, 3)
+    day9 = a["t"] < t[-288]
+    assert np.allclose(a.loc[day9, "q"].to_numpy(), b.loc[b["t"] < t[-288], "q"].to_numpy())

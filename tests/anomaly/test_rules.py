@@ -46,3 +46,16 @@ def test_night_quantized_humidity_not_stuck(ncfg, boards):
         w.iloc[night, w.columns.get_loc(c)] = 40.0
     r = stuck(w, ncfg, ncfg.acfg)
     assert not r["cause"].str.endswith("/humidity").any()
+
+
+def test_stuck_when_neighbours_missing_falls_back_to_alone(ncfg, boards):
+    """고정 구간에 이웃 관측이 모두 비면 '이웃 없음' 규칙(사용 시간대 alone_hours)으로 판정한다(2026-10-21 수정)."""
+    w = boards["lab"].copy()
+    k = w.index.tz_convert("Asia/Seoul")
+    day = np.where((k.weekday < 5) & (k.hour == 9) & (k.minute == 0))[0][0]
+    n = int(ncfg["rules"]["stuck"]["alone_hours"] * 12) + 12
+    w.iloc[day:day + n, w.columns.get_loc("L1/co2")] = w.iloc[day, w.columns.get_loc("L1/co2")]
+    others = [c for c in w.columns if c.endswith("/co2") and c != "L1/co2"]
+    w.iloc[day - 2:day + n + 2, [w.columns.get_loc(c) for c in others]] = np.nan
+    r = stuck(w, ncfg, ncfg.acfg)
+    assert "L1/co2" in set(r["cause"])
