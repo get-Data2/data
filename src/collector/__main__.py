@@ -86,6 +86,30 @@ def cmd_backfill(args, cfg):
     print(bf.run(start=start, end=day(args.end), max_chunks=args.max_chunks, dry_run=args.dry_run))
 
 
+def cmd_fill_gaps(args, cfg):
+    """실시간 수집의 빈틈(수집기 정지 등)을 InfluxDB로 채운다. 보드에서 InfluxDB가 닿아야 한다(유선 랜)."""
+    from datetime import datetime, timedelta
+    from .backfill import Backfill, fill_gaps
+    from .influx import InfluxReader
+    from .timeutil import KST, UTC
+    until = datetime.now(UTC)
+    since = (datetime.strptime(args.since, "%Y-%m-%d %H:%M").replace(tzinfo=KST).astimezone(UTC) if args.since
+             else until - timedelta(days=args.days))
+    try:
+        reader = InfluxReader(args.env, cfg.backfill["bucket"])
+    except Exception as e:
+        print(f"InfluxDB 접속 실패: {type(e).__name__}: {e}", file=sys.stderr)
+        sys.exit(EXIT_EXTERNAL)
+    bf = Backfill(cfg, reader, _connect(args), cfg.storage["table_prefix"])
+    res = fill_gaps(bf, since, until, dry_run=args.dry_run)
+    if not res:
+        print("빈틈 없음(3분 초과)")
+    for g in res:
+        print(f"{g['start'].astimezone(KST):%Y-%m-%d %H:%M:%S} ~ {g['end'].astimezone(KST):%H:%M:%S} KST ({g['minutes']}분): "
+              f"InfluxDB {g['influx_rows']}행 → {'채울' if args.dry_run else '채움'} {g['candidates']}행, 건너뜀 {g['skipped']}")
+    return 0
+
+
 def cmd_influx_export_script(args, cfg):
     """맥(내부망)용 내보내기 스크립트를 var/에 만든다. 토큰은 넣지 않는다."""
     import os
@@ -159,6 +183,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--from-dir", help="InfluxDB 대신 맥에서 받아 온 CSV 폴더로 적재(influx-export-script로 받은 것)")
     s.set_defaults(func=cmd_backfill)
 
+    s = sub.add_parser("fill-gaps", help="실시간 수집 빈틈(수집기 정지 등)을 InfluxDB로 채우기")
+    s.add_argument("--days", type=float, default=2, help="최근 며칠을 볼지(기본 2)")
+    s.add_argument("--since", help="KST 'YYYY-MM-DD HH:MM'(지정하면 --days 무시)")
+    s.add_argument("--dry-run", action="store_true")
+    s.set_defaults(func=cmd_fill_gaps)
     s = sub.add_parser("influx-export-script", help="맥(내부망)용 InfluxDB 내보내기 스크립트 만들기(토큰 없음)")
     s.add_argument("--start", help="시작 날짜 KST YYYY-MM-DD (기본: 적재 기록의 첫 구간 — 끝난 구간은 빠짐)")
     s.add_argument("--end", help="끝 날짜 KST YYYY-MM-DD (기본: 수집기 첫 수신 시각)")

@@ -47,7 +47,7 @@
   보호 훅은 이름에 `README.md`가 든 셸 쓰기 명령을 막으므로 이 파일들은 Write/Edit 도구로 고친다.
 
 ## 진행 상황
-- [x] 과제 1 데이터 수집 체계 — 완료·상시 수집 중(2026-10-20 16:33~). 24h 최종 커버율 최저 98.6%(2026-10-21). 남은 것: InfluxDB 미적재 90일·장치 미특정 75만 행(보드 유선 링크 복구 또는 맥 CSV 내보내기 `collector influx-export-script` → `backfill --from-dir`). 연결 점검 `collector check`
+- [x] 과제 1 데이터 수집 체계 — 완료·상시 수집 중(2026-10-20 16:33~). 24h 최종 커버율 최저 98.6%(2026-10-21). 남은 것: InfluxDB 미적재 90일·장치 미특정 75만 행(보드 유선 링크 복구 또는 맥 CSV 내보내기 `collector influx-export-script` → `backfill --from-dir`). 연결 점검 `collector check`. 수집기 정지 등 실시간 빈틈은 `collector fill-gaps --days 2`(InfluxDB에서 빈틈 안쪽만, ±2초 중복 제외. xflow는 복구 불가)
 - [x] 과제 2 데이터 이해와 기준선 — 완료(2026-10-21). 분할 `v1-provisional`이 과제 3~6 공식 평가 기준(`var/eval/eval_points_v1-provisional.parquet`).
   `v2-final`(2학기 시험)은 InfluxDB 적재 후 추가 비교(선택). 산출물 `docs/deliverables/task2/`, 점검 `docs/tasks/task2-data-baseline.md`
 - [ ] 과제 3 60분 예측 — spec·plan 완료(2026-10-21). GPU(Orin, torch cu130) 사용, 그룹 미반영 세션은 `sg video`/`sg render`. 계획 `specs/003-forecast-60min/`

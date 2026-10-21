@@ -249,3 +249,46 @@ def summarize(progress: dict, head: str = "") -> str:
     if skipped:
         lines.append("건너뜀: " + ", ".join(f"{k} {v:,}" for k, v in skipped.most_common()))
     return "\n".join(x for x in lines if x)
+
+
+def find_gaps(conn, prefix: str, since: datetime, until: datetime, min_gap_s: float = 180) -> list[tuple[datetime, datetime]]:
+    """실시간 수집분(source ≠ influx)에서 min_gap_s보다 긴 빈틈(수집기 정지 등). 경계는 빈틈 앞뒤의 실제 행 시각."""
+    with conn.cursor() as cur:
+        cur.execute(f"SELECT ts FROM `{prefix}measurement` WHERE source<>%s AND ts >= %s AND ts < %s ORDER BY ts",
+                    [SOURCE, dbtime(since), dbtime(until)])
+        ts = [r[0] for r in cur.fetchall()]
+    return [(a.replace(tzinfo=UTC), b.replace(tzinfo=UTC)) for a, b in zip(ts, ts[1:])
+            if (b - a).total_seconds() > min_gap_s]
+
+
+def fill_gaps(bf: "Backfill", since: datetime, until: datetime, dry_run: bool = False, near_s: float = 2.0) -> list[dict]:
+    """실시간 수집의 빈틈을 InfluxDB로 채운다(2026-10-21 수집기 정지 시험 뒤 추가).
+
+    InfluxDB 시각은 수집기 시각(네트워크 서버 시각)보다 약 0.2초 늦어 고유 키(장치·항목·시각)로는 중복을 못 막는다.
+    그래서 빈틈 안쪽 행만, 같은 장치·항목의 행이 ±near_s초 안에 없을 때만 넣는다. xflow(냉난방)는 InfluxDB에 없어 채우지 못한다.
+    """
+    infer = bf.build_infer(until)
+    out = []
+    for a, b in find_gaps(bf.conn, bf.prefix, since, until):
+        rows = bf.reader.query(flux_chunk(bf.reader.bucket, bf.cfg, a, b))
+        cand, skipped = [], Counter()
+        with bf.conn.cursor() as cur:
+            for r in rows:
+                m, _info, why = convert(r, bf.cfg, infer)
+                if why:
+                    skipped[why] += 1
+                    continue
+                t = datetime.fromisoformat(str(m["ts"])).replace(tzinfo=None)
+                if not (a.replace(tzinfo=None) < t < b.replace(tzinfo=None)):
+                    continue
+                cur.execute(f"SELECT 1 FROM `{bf.prefix}measurement` WHERE device_id=%s AND item=%s AND ts BETWEEN %s AND %s LIMIT 1",
+                            [m["device_id"], m["item"], t - timedelta(seconds=near_s), t + timedelta(seconds=near_s)])
+                if cur.fetchone():
+                    skipped["already"] += 1
+                    continue
+                cand.append(("measurement", m))
+        if cand and not dry_run:
+            bf._write(cand)
+        out.append({"start": a, "end": b, "minutes": round((b - a).total_seconds() / 60, 1), "influx_rows": len(rows),
+                    "written": 0 if dry_run else len(cand), "candidates": len(cand), "skipped": dict(skipped)})
+    return out

@@ -65,3 +65,26 @@ def test_backfill_idempotent_and_keeps_current_space(mysql_conn, config, tmp_pat
     assert "남은 0개" in Backfill(config, FakeReader(ROWS), conn, p, str(tmp_path / "prog.json")).run(end=end)
     Backfill(config, FakeReader(ROWS), conn, p, str(tmp_path / "other.json")).run(end=end)
     assert count(conn, f"SELECT COUNT(*) FROM `{p}measurement`") == 3
+
+
+def _live(dev, ts, v):
+    return ("measurement", {"ts": ts, "space_id": "office", "device_id": dev, "item": "co2", "value": v, "unit": "ppm",
+                            "source": "chirpstack", "received_at": ts, "source_ts": ts, "ts_corrected": 0, "frame_cnt": None})
+
+
+def test_fill_gaps_only_inside_gap_without_near_duplicates(mysql_conn, config):
+    """수집기 정지 빈틈만 InfluxDB로 채운다. 경계의 같은 측정(InfluxDB 시각이 0.2초 늦음)은 중복으로 넣지 않는다."""
+    from collector.backfill import fill_gaps, find_gaps
+    conn, p = mysql_conn
+    store.write_batch(conn, p, [_live("dA", "2026-10-21 10:50:00.000", 700), _live("dA", "2026-10-21 10:51:00.000", 710),
+                                _live("dA", "2026-10-21 11:01:00.000", 760), _live("dA", "2026-10-21 11:02:00.000", 770)])
+    rows = [{"_time": f"2026-10-21T{t}Z", "_value": v, "_measurement": "co2", "device_id": "dA",
+             "location": "사무실", "point": "안쪽", "spot": "안쪽"}
+            for t, v in [("10:51:00.230", "710"), ("10:53:00.200", "720"), ("10:57:00.200", "740"), ("11:01:00.210", "760")]]
+    a, b = datetime(2026, 10, 21, 10, 0, tzinfo=timezone.utc), datetime(2026, 10, 21, 12, 0, tzinfo=timezone.utc)
+    assert [(g[0].minute, g[1].minute) for g in find_gaps(conn, p, a, b)] == [(51, 1)]
+    bf = Backfill(config, FakeReader(rows), conn, p)
+    res = fill_gaps(bf, a, b)
+    assert res[0]["written"] == 2                        # 10:53, 10:57 — 경계 두 행(10:51·11:01 쌍둥이)은 제외
+    assert count(conn, f"SELECT COUNT(*) FROM `{p}measurement` WHERE source='influx'") == 2
+    assert fill_gaps(bf, a, b)[0]["written"] == 0        # 다시 돌려도 그대로
