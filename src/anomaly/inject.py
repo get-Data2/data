@@ -68,12 +68,15 @@ def inject(boards: dict[str, pd.DataFrame], cfg, seed: int | None = None) -> tup
 
 
 def _eligible(w: pd.DataFrame, kind: str) -> bool:
-    items = {split_col(c)[1] for c in w.columns}
+    items = {split_col(c)[1] for c in w.columns if w[c].notna().mean() >= 0.3}
     return {"F1": True, "F2": True, "F3": "co2" in items, "F4": "temperature" in items, "F5": "co2" in items}[kind]
 
 
 def _draw(kind, w, t, rng, ic, u0, u1, cfg):
-    cols = list(w.columns)
+    # 시험 기간 관측이 30% 미만인 열(그 기간에 없던 센서)은 주입 대상에서 뺀다
+    cols = [c for c in w.columns if w[c].notna().mean() >= 0.3]
+    if not cols:
+        return None
     p = ic[kind]
     if kind in ("F1", "F2", "F3"):
         cand = [c for c in cols if kind != "F3" or split_col(c)[1] == "co2"]

@@ -28,7 +28,10 @@ class Work:
     def __init__(self, cfg, root: Path = ROOT, sensor: pd.DataFrame | None = None):
         self.cfg, self.root = cfg, root
         self.sensor = load_sensor(cfg) if sensor is None else sensor
-        self.cols = {s: space_cols(self.sensor, s, cfg) for s in cfg.spaces}
+        # 열 = 학습 기간에 관측이 있는 (장치, 항목). 실시간 수집 뒤 새로 생긴 센서는 모델이 본 적 없으므로 뺀다(2026-10-21)
+        a, b = cfg.split.utc("train")
+        tr = self.sensor[(self.sensor["bin"] >= pd.Timestamp(a)) & (self.sensor["bin"] < pd.Timestamp(b))]
+        self.cols = {s: space_cols(tr, s, cfg) for s in cfg.spaces}
         self._w = {}
 
     def w(self, space: str, period: str) -> pd.DataFrame:
