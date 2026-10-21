@@ -4,9 +4,9 @@ set -eu
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 UNIT_DIR="$HOME/.config/systemd/user"
 mkdir -p "$ROOT/var" "$UNIT_DIR"
-for u in team2-backfill.service team2-backfill.timer; do
+for u in wonil-backfill.service wonil-backfill.timer; do
   sed "s#@ROOT@#$ROOT#g" "$ROOT/deploy/$u" >"$UNIT_DIR/$u"
 done
 systemctl --user daemon-reload
-systemctl --user enable --now team2-backfill.timer
-systemctl --user list-timers team2-backfill.timer --no-pager | head -3
+systemctl --user enable --now wonil-backfill.timer
+systemctl --user list-timers wonil-backfill.timer --no-pager | head -3

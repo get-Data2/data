@@ -1,5 +1,5 @@
 [Unit]
-Description=team2 InfluxDB 과거 데이터 적재 재시도(10분마다)
+Description=wonil InfluxDB 과거 데이터 적재 재시도(10분마다)
 
 [Timer]
 OnBootSec=2min
