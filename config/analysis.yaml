@@ -55,6 +55,7 @@ baseline:
   horizons_min: [5, 15, 30, 60]
   mean_window_min: 60
   mean_min_coverage: 0.5
+  min_points: 1000                 # 이보다 적으면 표에 숫자 대신 '평가 불가'와 이유(예: 회의실 10분 주기 센서의 5·15분 지평)
   usage_hours: {weekdays: [mon, tue, wed, thu, fri], start: "08:00", end: "19:00", exclude_holidays: true}
 
 schedule:                          # 고정 일과표(2026-10-21 결정). 실제 자료는 file(CSV)로 교체
@@ -65,7 +66,7 @@ schedule:                          # 고정 일과표(2026-10-21 결정). 실제
     - {space: lab,    days: [mon, tue, wed, thu, fri], start: "13:00", end: "18:00", kind: class}
     - {space: office, days: [mon, tue, wed, thu, fri], start: "09:00", end: "11:30", kind: work}
     - {space: office, days: [mon, tue, wed, thu, fri], start: "13:00", end: "18:00", kind: work}
-  reaction: {pre_min: 15, window_min: 60, delta_ppm: 30}
+  reaction: {pre_min: 15, window_min: 60, delta_ppm: 30, nonclass_use_ppm: 150}   # 비수업일 하루 상승폭이 이 이상이면 "사용"
 
 report:
   out_dir: docs/reports/task2

@@ -29,7 +29,7 @@
 | 위치 | 역할 |
 |---|---|
 | `specs/NNN-이름/` | 계획(Spec Kit: spec·plan·tasks) |
-| `src/<패키지>/` | 소스 코드 (과제별 패키지, 예: `src/collector/`) |
+| `src/<패키지>/` | 소스 코드 (과제별 패키지: `src/collector/` 과제 1, `src/analysis/` 과제 2) |
 | `config/` | 동작 설정(YAML, 비밀 없음) |
 | `deploy/` | systemd 사용자 서비스·설치 스크립트 |
 | `tests/` | pytest (`unit`/`broker`/`mysql`/`live` 마커) |
@@ -47,4 +47,4 @@
 ## 진행 상황
 - [ ] 과제 1 데이터 수집 체계 — 핵심 완료·상시 수집 중(2026-10-20 16:33~). 남은 것: 24h 최종 보고(10-21 16:40 이후), 재부팅 시험(사용자 일정),
   InfluxDB 미적재 90일·장치 미특정 75만 행 복원(유선망 복구 대기). 연결 점검: `python -m collector check`
-- [ ] 과제 2 데이터 이해와 기준선 — spec 초안(`specs/002-data-baseline`), 일정 자료 결정 대기
+- [ ] 과제 2 데이터 이해와 기준선 — 잠정 결과 완료(`v1-provisional`, `analysis all`), 확정(`v2-final`)은 InfluxDB 미적재분 적재 후. 산출물 `docs/tasks/task2-data-baseline.md`
