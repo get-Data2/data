@@ -127,6 +127,17 @@ def cmd_test(args, cfg):
     return 0
 
 
+def cmd_b1_test(args, cfg):
+    from .experiments import SelectionMissingError
+    from .report_b1 import run
+    try:
+        run()
+    except SelectionMissingError as e:
+        print(f"시험 평가 거부: {e}")
+        return EXIT_SELECTION
+    return 0
+
+
 def cmd_report(args, cfg):
     from .report import write_reports
     ctx = _ctx(args, cfg)
@@ -172,6 +183,7 @@ def main(argv=None) -> int:
     p.add_argument("--to-report", action="store_true", help="끝나면 select → test → report까지")
     sub.add_parser("select")
     sub.add_parser("test")
+    sub.add_parser("b1-test", help="모델 × 과거 길이 9조합 시험 성적(보고용, 선택 고정 뒤)")
     sub.add_parser("report")
     sub.add_parser("info")
     args = ap.parse_args(argv)
@@ -181,7 +193,7 @@ def main(argv=None) -> int:
         print(e)
         return EXIT_CONFIG
     return {"check": cmd_check, "build": cmd_build, "train": cmd_train, "run": cmd_run, "select": cmd_select,
-            "test": cmd_test, "report": cmd_report, "info": cmd_info}[args.cmd](args, cfg)
+            "test": cmd_test, "b1-test": cmd_b1_test, "report": cmd_report, "info": cmd_info}[args.cmd](args, cfg)
 
 
 if __name__ == "__main__":

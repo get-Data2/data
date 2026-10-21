@@ -6,6 +6,10 @@ ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 export CUBLAS_WORKSPACE_CONFIG=:4096:8 PYTHONUNBUFFERED=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export HF_HOME="$ROOT/var/pretrained/hf"
 [ "$1" = "fetch" ] || export HF_HUB_OFFLINE=1
+# Chronos-Bolt 디코더 경로가 Triton을 부르고, Triton은 Python.h로 C 도우미를 컴파일한다. 시스템에는 python3-dev가 없어(sudo 없음)
+# uv가 받은 독립 실행 Python 3.12의 헤더를 쓴다(`uv python install 3.12`, 2026-10-21)
+H=$(ls -d "$HOME"/.local/share/uv/python/cpython-3.12*/include/python3.12 2>/dev/null | head -1)
+[ -n "$H" ] && export C_INCLUDE_PATH="$H${C_INCLUDE_PATH:+:$C_INCLUDE_PATH}"
 if [ -z "$PRETRAINED_SG" ] && ! id -nG | tr ' ' '\n' | grep -qx video && id -nG "$(id -un)" | tr ' ' '\n' | grep -qx video; then
   export PRETRAINED_SG=1
   q=""

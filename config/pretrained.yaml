@@ -16,8 +16,8 @@ item: co2
 horizon_bins: 12
 quantiles: [0.1, 0.5, 0.9]
 min_context_obs: 0.1
-missing: nan                                  # nan(모델에 결측 그대로) | ffill(앞으로 채움) — fetch 뒤 실측으로 확정(T016)
-batch_size: 256                               # 예측 배치(메모리 상한)
+missing: ffill                                # 2026-10-21 실측(T016): 회의실 60분 MAE ffill 65.5 vs nan 85.0, 실습실·사무실 같음
+batch_size: 32                                # 예측 배치(메모리 상한)
 
 models:                                       # 리비전은 fetch 때 확인한 커밋 해시로 고정(models.json)
   bolt_tiny:  {repo: amazon/chronos-bolt-tiny,  revision: null}

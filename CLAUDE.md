@@ -47,12 +47,13 @@
   보호 훅은 이름에 `README.md`가 든 셸 쓰기 명령을 막으므로 이 파일들은 Write/Edit 도구로 고친다.
 
 ## 진행 상황
-- [x] 과제 1 데이터 수집 체계 — 완료·상시 수집 중(2026-10-20 16:33~). 24h 최종 커버율 최저 98.6%(2026-10-21). 남은 것: InfluxDB 미적재 90일·장치 미특정 75만 행(보드 유선 링크 복구 또는 맥 CSV 내보내기 `collector influx-export-script` → `backfill --from-dir`). 연결 점검 `collector check`. 수집기 정지 등 실시간 빈틈은 `collector fill-gaps --days 2`(InfluxDB에서 빈틈 안쪽만, ±2초 중복 제외. xflow는 복구 불가)
+- [x] 과제 1 데이터 수집 체계 — 완료·상시 수집 중(2026-10-20 16:33~). 24h 최종 커버율 최저 98.6%(2026-10-21). InfluxDB 90일 적재 완료(2026-10-21 17:44). 남은 것: 장치 미특정 75만 행(선택). 유선이 없으면 맥 CSV 경로(`collector influx-export-script` → `backfill --from-dir`). 연결 점검 `collector check`. 수집기 정지 등 실시간 빈틈은 `collector fill-gaps --days 2`(InfluxDB에서 빈틈 안쪽만, ±2초 중복 제외. xflow는 복구 불가)
 - [x] 과제 2 데이터 이해와 기준선 — 완료(2026-10-21). 분할 `v1-provisional`이 과제 3~6 공식 평가 기준(`var/eval/eval_points_v1-provisional.parquet`).
   `v2-final`(2학기 시험)은 InfluxDB 적재 후 추가 비교(선택). 산출물 `docs/deliverables/task2/`, 점검 `docs/tasks/task2-data-baseline.md`
 - [x] 과제 3 60분 예측 — 완료(2026-10-21). 최종 GRU 2h(`var/forecast/bundle`, 해시 `52aff4f0c4bf`), 실습실 CO₂ 60분 53% 개선. GPU 학습은 `tools/forecast`(sg 래퍼). 점검 `docs/tasks/task3-forecast-60min.md`
 - [ ] 과제 4 이상 탐지 — 평가 완료(2026-10-21). 탐지 86.7% ✅, 헛경보 4.65회/일 ❌(검증 0.47 → 계절 이동). 임계값·적응 기준으로는 해결 안 됨 → 여름 포함 재학습(`v2-final`) 필요. `anomaly info`·`anomaly adaptive`
 - [ ] 과제 5 상태 추정 — 학습·평가 완료(2026-10-21). 환기 macro-F1 0.798 > 규칙 ✅, 재현율 67% ❌(실습실 87%). 사용 여부는 직접 관찰 대기(`state observe`, `data/observations.csv` git 제외). 관찰 반영: `analysis extract && state evaluate && state report`
+- [x] 과제 6 사전학습 모델 비교 — 완료(2026-10-22). Chronos-Bolt 3종 + Chronos-2, 과거 1주가 최선. Chronos-2가 사무실·회의실에서 GRU보다 나음(검증도 동일), 메모리 1.9GB라 상주 안 함. `tools/pretrained`가 uv Python 헤더를 C_INCLUDE_PATH로 설정(Triton용). 예측 묶음 32(256은 3.8GB)
 - [x] 과제 7 엣지 최적화 — 완료(2026-10-21). **TensorRT는 JetPack 시스템 10.16**을 `.venv/.../system_tensorrt.pth`(→ `~/.local/share/systrt`)로 연결(pip tensorrt-cu13 11.4는 sm87 빌더 없음, ORT CUDA는 sm87 커널 없음). FP16은 GRU·LSTM 1ppm 초과 → 서비스는 ONNX Runtime CPU(`var/edgeopt/runtime/runtime.json`), 적용은 과제 8 12시간 기록 뒤
 - [ ] 과제 8 상시 추론 서비스 — 상시 가동 중(`wonil-inference` + 보드 브로커 `wonil-broker` :11883, API :18080, CLI `infer`).
   장애 시험·API·결과 형식 문서·심화 2개 완료(2026-10-21). 남은 것: 12시간 표(10-22 08:25 자동 생성 → `docs/deliverables/task8/tables/02-12h-run.md`로 산출물 ② 마무리), 재부팅 실측(사용자 일정).
