@@ -19,6 +19,7 @@ test = ["pytest>=8", "amqtt==0.12.*"]
 analysis = ["pandas>=3.0", "pyarrow>=26", "matplotlib>=3.11", "holidays>=0.107"]
 # torch는 aarch64 CUDA판을 cu130 index에서 따로 설치한다(specs/003-forecast-60min/quickstart.md)
 forecast = ["torch>=2.14"]
+pretrained = ["chronos-forecasting==2.3.2"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -35,4 +36,5 @@ markers = [
   "mysql: 실 MySQL(test_ 접두사 테이블) 사용",
   "live: 실 MQTT 브로커 사용",
   "forecast: 실데이터로 짧게 학습(과제 3, 느림)",
+  "pretrained: 실제 사전학습 가중치 사용(과제 6, 느림)",
 ]
