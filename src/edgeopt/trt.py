@@ -104,6 +104,8 @@ def build_engine(onnx_path: Path, engine_path: Path, input_shapes: dict[str, tup
         config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, workspace_mb << 20)
         if fp16:
             config.set_flag(trt.BuilderFlag.FP16)
+        elif hasattr(trt.BuilderFlag, "TF32"):
+            config.clear_flag(trt.BuilderFlag.TF32)       # FP32 엔진은 TF32도 끈다(학습·과제 3과 같은 정밀도)
         if int8:
             config.set_flag(trt.BuilderFlag.INT8)
             stage = "calibrator"

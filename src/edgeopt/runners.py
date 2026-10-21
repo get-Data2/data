@@ -79,7 +79,7 @@ class TrtRunnerAdapter(Runner):
 
 
 def make_runner(name: str, ld, art: dict, threads: int | None = None) -> Runner:
-    """art: {"onnx": 경로, "trt_fp16": 엔진 경로, "trt_int8": 엔진 경로}."""
+    """art: {"onnx": 경로, "trt_fp16"·"trt_fp32"·"trt_int8": 엔진 경로}."""
     if name in ("torch_cpu", "torch_gpu"):
         return TorchRunner(ld, "cpu" if name == "torch_cpu" else "cuda", threads)
     if name.startswith("ort_"):
@@ -97,7 +97,7 @@ def artifacts(root: Path, model: str) -> dict:
     a = {}
     if (root / "onnx" / f"{model}.onnx").exists():
         a["onnx"] = root / "onnx" / f"{model}.onnx"
-    for k in ("trt_fp16", "trt_int8"):
+    for k in ("trt_fp16", "trt_fp32", "trt_int8"):
         p = root / "engines" / f"{model}__{k}.plan"
         if p.exists():
             a[k] = p

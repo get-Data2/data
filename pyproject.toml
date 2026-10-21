@@ -21,7 +21,7 @@ analysis = ["pandas>=3.0", "pyarrow>=26", "matplotlib>=3.11", "holidays>=0.107"]
 forecast = ["torch>=2.14"]
 pretrained = ["chronos-forecasting==2.3.2"]
 state = ["scikit-learn>=1.9"]
-edgeopt = ["onnx>=1.23", "onnxruntime-gpu>=1.31", "tensorrt-cu13>=11.4"]
+edgeopt = ["onnx>=1.23", "onnxruntime-gpu>=1.31"]   # TensorRT는 JetPack 시스템 판(10.16)을 .pth로 연결(pip tensorrt-cu13은 sm87 빌더 없음)
 
 [tool.setuptools.packages.find]
 where = ["src"]

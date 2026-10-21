@@ -134,11 +134,13 @@ def cmd_build(args, cfg):
         if spec.status != "ready" or not onnx.exists():
             continue
         ld = load_model(spec)
-        kinds = [("trt_fp16", False)] + ([("trt_int8", True)] if args.int8 else [])
+        kinds = ([] if args.only_extra else [("trt_fp16", False)]) + ([("trt_int8", True)] if args.int8 else []) \
+            + ([("trt_fp32", False)] if args.fp32 else [])
         for k, int8 in kinds:
             calib = _int8_calibration(cfg, spec, ld) if int8 else None
             rec = build_engine(onnx, ROOT / "engines" / f"{spec.name}__{k}.plan", ld.input_shapes, t["profile"],
-                               t["workspace_mb"], fp16=True, int8=int8, calib=calib, fp32_last_layer=t["fp32_last_layer"])
+                               t["workspace_mb"], fp16=k != "trt_fp32", int8=int8, calib=calib,
+                               fp32_last_layer=t["fp32_last_layer"] and k == "trt_fp16")
             conv.setdefault(spec.name, {})[k] = rec
             print(f"  {spec.name} {k}: {'✅' if rec['ok'] else '❌ ' + rec.get('stage', '') + ' ' + rec.get('error', '')[:100]} {rec['build_seconds']}초")
     conv_p.write_text(json.dumps(conv, ensure_ascii=False, indent=1, default=str))
@@ -247,6 +249,8 @@ def main(argv=None) -> int:
     p = sub.add_parser("build")
     p.add_argument("models", nargs="*")
     p.add_argument("--int8", action="store_true")
+    p.add_argument("--fp32", action="store_true", help="FP32 엔진(TF32 끔)도 만든다 — FP16이 1ppm 기준을 넘을 때 비교용")
+    p.add_argument("--only-extra", action="store_true", help="FP16 엔진은 다시 만들지 않는다")
     for c in ("bench", "diff"):
         p = sub.add_parser(c)
         p.add_argument("--runner", action="append")

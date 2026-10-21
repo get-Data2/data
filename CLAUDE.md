@@ -53,6 +53,7 @@
 - [x] 과제 3 60분 예측 — 완료(2026-10-21). 최종 GRU 2h(`var/forecast/bundle`, 해시 `52aff4f0c4bf`), 실습실 CO₂ 60분 53% 개선. GPU 학습은 `tools/forecast`(sg 래퍼). 점검 `docs/tasks/task3-forecast-60min.md`
 - [ ] 과제 4 이상 탐지 — 평가 완료(2026-10-21). 탐지 86.7% ✅, 헛경보 4.65회/일 ❌(검증 0.47 → 계절 이동). 임계값·적응 기준으로는 해결 안 됨 → 여름 포함 재학습(`v2-final`) 필요. `anomaly info`·`anomaly adaptive`
 - [ ] 과제 5 상태 추정 — 학습·평가 완료(2026-10-21). 환기 macro-F1 0.798 > 규칙 ✅, 재현율 67% ❌(실습실 87%). 사용 여부는 직접 관찰 대기(`state observe`, `data/observations.csv` git 제외). 관찰 반영: `analysis extract && state evaluate && state report`
+- [x] 과제 7 엣지 최적화 — 완료(2026-10-21). **TensorRT는 JetPack 시스템 10.16**을 `.venv/.../system_tensorrt.pth`(→ `~/.local/share/systrt`)로 연결(pip tensorrt-cu13 11.4는 sm87 빌더 없음, ORT CUDA는 sm87 커널 없음). FP16은 GRU·LSTM 1ppm 초과 → 서비스는 ONNX Runtime CPU(`var/edgeopt/runtime/runtime.json`), 적용은 과제 8 12시간 기록 뒤
 - [ ] 과제 8 상시 추론 서비스 — 상시 가동 중(`wonil-inference` + 보드 브로커 `wonil-broker` :11883, API :18080, CLI `infer`).
   장애 시험·API·결과 형식 문서·심화 2개 완료(2026-10-21). 남은 것: 12시간 표(10-22 08:25 자동 생성 → `docs/deliverables/task8/tables/02-12h-run.md`로 산출물 ② 마무리), 재부팅 실측(사용자 일정).
   서비스 DB 읽기는 **자동 커밋 필수**(끄면 REPEATABLE READ 스냅샷에 갇혀 새 행을 못 봄). 모델 교체는 `infer reload`(PID 파일로 파이썬에만 HUP)

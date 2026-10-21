@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-RUNNERS = ("torch_cpu", "torch_gpu", "ort_cpu", "ort_cuda", "ort_trt", "trt_fp16", "trt_int8")
+RUNNERS = ("torch_cpu", "torch_gpu", "ort_cpu", "ort_cuda", "ort_trt", "trt_fp16", "trt_fp32", "trt_int8")
 KINDS = ("forecast", "autoencoder", "classifier")
 
 
@@ -26,6 +26,9 @@ class EdgeConfig:
 
     def __getitem__(self, k):
         return self.raw[k]
+
+    def get(self, k, default=None):
+        return self.raw.get(k, default)
 
     @property
     def digest(self) -> str:
