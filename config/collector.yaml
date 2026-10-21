@@ -22,6 +22,12 @@ devices:                     # 장치 단위 덮어쓰기(태그가 틀리거나
   24e124126d152862: {expected_period_s: 120}   # EM500-CO2 실습실 후방 우측(122초)
   24e124128c140101: {expected_period_s: 600}   # AM107 실습실 전방 우측(600초)
   24e124725d089152: {expected_period_s: 600}   # AM103 회의실(600초)
+  24e124136d151523: {expected_period_s: 600}   # EM300-TH 실습실 복도(2026-10-20~21 수집기 관측 10분)
+  54427240-8598-11f1-bcac-bdfb397bbe8a: {expected_period_s: 120}   # xflow 개발실 실내기(간격 60초·120초 혼재, 2026-10-20~21 실측)
+  c71aa2c0-859c-11f1-bcac-bdfb397bbe8a: {expected_period_s: 120}   # xflow 개발실 실외기(같음)
+  # 사건형 센서(WS301 문 열림): 주기 보고가 아니라 열림·닫힘 때만 보낸다 → 커버율·결측 판정 제외
+  24e124141d189196: {periodic: false}          # 사무실 출입문
+  24e124141d229577: {periodic: false}          # 창고
   # 24e124xxxxxxxxxx: {expected_period_s: 600}
   # 24e124yyyyyyyyyy: {enabled: false}
 

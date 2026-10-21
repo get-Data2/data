@@ -71,6 +71,14 @@ def cmd_backfill(args, cfg):
     print(bf.run(start=day(args.start), end=day(args.end), max_chunks=args.max_chunks, dry_run=args.dry_run))
 
 
+def cmd_check(args, cfg):
+    from .check import run_checks
+    ok, table = run_checks(cfg, args.env, args.seconds, args.skip_influx)
+    print(table)
+    if not ok:
+        sys.exit(EXIT_EXTERNAL)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m collector", description="MQTT 센서 수집기")
     p.add_argument("--config", default="config/collector.yaml")
@@ -78,6 +86,11 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("check-config", help="설정만 검증").set_defaults(func=cmd_check_config)
+
+    s = sub.add_parser("check", help="연결 점검: 수집 서비스·MQTT·MySQL·InfluxDB")
+    s.add_argument("--seconds", type=float, default=10, help="MQTT 메시지를 받아 볼 시간(초)")
+    s.add_argument("--skip-influx", action="store_true")
+    s.set_defaults(func=cmd_check)
 
     s = sub.add_parser("init-db", help="테이블 생성·공간 동기화(멱등)")
     s.add_argument("--prefix", default=None, help="테이블 접두사(기본: 설정 storage.table_prefix)")

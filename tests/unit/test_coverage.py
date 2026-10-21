@@ -33,8 +33,8 @@ def test_coverage_long_period():
 
 def test_gaps_min_length():
     mins = set(range(S, E)) - {S + 5} - set(range(S + 20, S + 23))
-    assert gaps(mins, S, E, 60, 2) == [(S + 20, S + 23)]       # 1분 빈칸은 무시
-    assert gaps(mins, S, E, 60, 1) == [(S + 5, S + 6), (S + 20, S + 23)]
+    assert gaps(mins, S, E, 60, 2) == [(S + 20, S + 23)]       # 1분 빈칸(보고 1회 손실)은 결측이 아님
+    assert gaps(mins, S, E, 60, 1) == [(S + 20, S + 23)]       # 최소 길이를 낮춰도 주기 2배 규칙은 유지
 
 
 def test_gaps_edges():
@@ -101,3 +101,17 @@ def test_observed_period():
     from collector.report import observed_period_min
     assert observed_period_min({S, S + 10, S + 20, S + 31}) == 10
     assert observed_period_min({S, S + 1}) is None
+
+
+def test_gap_needs_two_periods():
+    # 2분 주기 장치가 보고 한 번(2분) 빠진 것은 결측이 아니고, 두 번(4분) 빠지면 결측
+    mins = set(range(S, E, 2)) - {S + 10}
+    assert gaps(mins, S, E, 120, 2) == []
+    mins -= {S + 12}
+    assert gaps(mins, S, E, 120, 2) == [(S + 10, S + 14)]
+
+
+def test_cause_mqtt_first():
+    dm = dev_minutes(missing_a=range(S + 10, S + 13))
+    h = cause_hint((S + 10, S + 13), "a", dm, set(range(S, E)), [Event(S + 10.5, "mqtt_disconnected", "Keep alive timeout")])
+    assert h.startswith("MQTT 끊김")

@@ -44,7 +44,8 @@ def gaps(minutes: set[int], start_min: int, end_min: int, period_s: int = 60,
     res = []
     for a, b in out:
         s, e = max(a * k, start_min), min(b * k, end_min)
-        if e - s >= max(min_minutes, k):
+        # 결측 = 자기 주기의 2배 이상 빈 경우(보고 한 번 손실은 결측으로 세지 않음 — 과제 2 spec과 같은 정의)
+        if e - s >= max(min_minutes, 2 * k):
             res.append((s, e))
     return res
 
@@ -77,8 +78,15 @@ def cause_hint(gap: tuple[int, int], device_id: str | None, device_minutes: dict
     else:
         missing_share = 1.0
 
+    mqtt_down = any(ev.kind in ("mqtt_disconnected", "stale_reconnect") and ev.detail != "Normal disconnection"
+                    for ev in near)
+    restarted = any(ev.kind in ("stop", "start") for ev in near)
     if no_stats > 0.5:
         hints.append("수집기 미가동(분 통계 없음)")
+    elif mqtt_down:
+        hints.append("MQTT 끊김(수집기 측) → 브로커·네트워크")
+    elif restarted and e - s <= 5:
+        hints.append("수집기 재시작 중 결측")
     elif device_id is None or missing_share >= 0.8:
         if any(ev.kind in ("mqtt_disconnected", "stale_reconnect") for ev in near):
             hints.append("전 장치 동시 결측 + MQTT 끊김 → 브로커·네트워크")
@@ -211,12 +219,20 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
         "# 수집 현황 보고",
         f"- 기간: {kst(d.start, '%Y-%m-%d %H:%M')} ~ {kst(d.end, '%Y-%m-%d %H:%M')} KST ({hours:g}h) · "
         f"{'합성 데이터' if synthetic else '실데이터'} · 생성 {kst(now, '%Y-%m-%d %H:%M')} KST",
-        "- 커버율: 1분 칸(기준 시각) 중 값이 있는 칸 비율. 공간·항목은 장치 중 하나라도 있으면 채움. "
-        "주기가 긴 장치는 주기 칸으로 계산",
+        "- 커버율: 기대 주기 칸(기준 시각) 중 값이 있는 칸 비율. 공간·항목은 장치 중 하나라도 있으면 채움. "
+        "빠진 구간은 자기 주기의 2배 이상 빈 경우만 셈",
     ]
 
-    # 요약
-    covs = {k: coverage(m, s_min, e_min) for k, m in d.space_item_minutes.items()}
+    # 요약 — 공간·항목 커버율은 그 항목을 보내는 장치 중 가장 짧은 기대 주기의 칸으로 센다(10분 장치만 있는 회의실 등)
+    def period(dev):
+        if dev in cfg.devices and cfg.devices[dev].expected_period_s:
+            return cfg.devices[dev].expected_period_s
+        return (d.devices.get(dev) or {}).get("expected_period_s") or 60
+
+    def series_period(key):
+        pers = [period(x) for x in d.space_item_devices.get(key, ()) if cfg.is_periodic(x)]
+        return min(pers) if pers else 60
+    covs = {k: coverage(m, s_min, e_min, series_period(k)) for k, m in d.space_item_minutes.items()}
     core = {k: v for k, v in covs.items() if k[1] in ("co2", "temperature", "humidity")}
     if core:
         low = sorted((v, k) for k, v in core.items() if v < 0.95)
@@ -226,17 +242,18 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
 
     # ① 미매핑·끊김 장치
     stale_s = cfg.report["stale_after_s"]
-    live_end = abs((now - d.end).total_seconds()) < 120
     rows = []
     for dev, info in sorted(d.devices.items()):
         problems = []
         if info["mapped_by"] == "none" or info["space_id"] == "unmapped":
             problems.append(f"공간 미지정(원천 표기 '{info['raw_location']}')")
         last = info["last_seen"]
-        if live_end and last is not None:
+        if not d.device_minutes.get(dev):
+            problems.append("기간 내 숫자 측정값 없음(퇴역·문 열림 센서처럼 문자열만 보내는 장치)")
+        elif last is not None and cfg.is_periodic(dev):
             age = (d.end - last.replace(tzinfo=UTC)).total_seconds()
             if age > stale_s:
-                problems.append(f"끊김: {age / 60:.0f}분째 수신 없음")
+                problems.append(f"끊김: 기간 끝 기준 {age / 60:.0f}분째 수신 없음")
         if problems:
             rows.append([dev, info["model"], _space_label(d, info["space_id"]), kst(last), "; ".join(problems)])
     parts += ["", "## ① 확인 필요 장치(미매핑·끊김)",
@@ -254,8 +271,12 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
     if by in (None, "device"):
         rows, mismatch = [], []
         for dev, info in sorted(d.devices.items(), key=lambda kv: (kv[1]["space_id"], kv[0])):
-            per = info["expected_period_s"] or 60
+            per = period(dev)
             obs = observed_period_min(d.device_minutes.get(dev, set()))
+            if not cfg.is_periodic(dev):
+                rows.append([dev, info["model"], _space_label(d, info["space_id"]), "사건형", "—",
+                             f"{d.device_counts.get(dev, 0):,}", kst(info["last_seen"]), "—"])
+                continue
             if obs is not None and obs * 60 >= per * 2:
                 mismatch.append(f"`{dev}: {{expected_period_s: {int(obs * 60)}}}`")
             rows.append([dev, info["model"], _space_label(d, info["space_id"]), per,
@@ -277,13 +298,15 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
         rows.append(["(전체)", "—", kst(_dt(g[0]), "%m-%d %H:%M"), kst(_dt(g[1]), "%m-%d %H:%M"),
                      f"{g[1] - g[0]}분", cause_hint(g, None, d.device_minutes, d.stats_minutes, d.events)])
     for dev, info in sorted(d.devices.items()):
-        per = info["expected_period_s"] or 60
+        if not d.device_minutes.get(dev) or not cfg.is_periodic(dev):
+            continue                                         # 측정값 없는 장치는 ①번 표, 사건형 센서는 결측 판정 안 함
+        per = period(dev)
         mins = d.device_minutes.get(dev, set()) | global_set     # 전체 결측은 위에서 이미 보고
         for g in gaps(mins, s_min, e_min, per, gap_min):
             rows.append([dev, _space_label(d, info["space_id"]), kst(_dt(g[0]), "%m-%d %H:%M"),
                          kst(_dt(g[1]), "%m-%d %H:%M"), f"{g[1] - g[0]}분",
                          cause_hint(g, dev, d.device_minutes, d.stats_minutes, d.events, d.battery.get(dev))])
-    parts += ["", f"## ④ 빠진 구간({gap_min}분 이상)",
+    parts += ["", f"## ④ 빠진 구간(자기 주기의 2배 이상, 최소 {gap_min}분)",
               _table(["장치", "공간", "시작", "끝", "길이", "원인 단서"], rows) if rows else "없음"]
     return "\n".join(parts) + "\n"
 

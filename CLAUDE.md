@@ -10,14 +10,14 @@
 - Jetson (L4T R39, aarch64, RAM 7.3GB), Python 3.12.3. **sudo·Docker 권한 없음.**
 - 패키지는 `~/.local/bin/uv`로 `.venv`에 설치: `uv pip install --python .venv/bin/python <pkg>`
 - 실행은 항상 `.venv/bin/python`.
-- 상시 실행: systemd 사용자 서비스. `Linger=no`이므로 재부팅 자동 시작은 `loginctl enable-linger` 또는 `crontab @reboot`로 보완.
+- 상시 실행: systemd 사용자 서비스. `Linger=yes`(2026-10-20 sudo 없이 `loginctl enable-linger` 적용) → 재부팅 시 로그인 없이 시작.
 
 ## 외부 자원 (접속 정보는 `.env`)
 | 자원 | 용도 | 권한 |
 |---|---|---|
 | MQTT 브로커 | 실시간 센서 수신 (ChirpStack LoRaWAN, xflow 냉난방) | 구독 |
 | MySQL 8.0 (`cf_u36_d3`) | **수집 데이터 저장소** | 팀 DB 내 DDL/DML |
-| InfluxDB (사설 IP) | 원본 대조용 | 조회 전용, 현재 네트워크에서 접근 불가 |
+| InfluxDB (사설 IP) | 과거 데이터(2025-08~) 적재 원천 | 조회 전용. **유선 랜 경로(10.x)가 있을 때만** 접근됨 |
 
 ## 개발 방식
 - Spec Kit: `/speckit-constitution` → `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`
@@ -44,4 +44,6 @@
   보호 훅은 이름에 `README.md`가 든 셸 쓰기 명령을 막으므로 이 파일들은 Write/Edit 도구로 고친다.
 
 ## 진행 상황
-- [ ] 과제 1 데이터 수집 체계
+- [ ] 과제 1 데이터 수집 체계 — 핵심 완료·상시 수집 중(2026-10-20 16:33~). 남은 것: 24h 최종 보고(10-21 16:40 이후), 재부팅 시험(사용자 일정),
+  InfluxDB 미적재 90일·장치 미특정 75만 행 복원(유선망 복구 대기). 연결 점검: `python -m collector check`
+- [ ] 과제 2 데이터 이해와 기준선 — spec 초안(`specs/002-data-baseline`), 일정 자료 결정 대기

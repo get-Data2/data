@@ -49,6 +49,7 @@ class DeviceOverride:
     space: str | None = None
     expected_period_s: int | None = None
     enabled: bool = True
+    periodic: bool = True          # False: 사건이 있을 때만 보내는 센서(문 열림 등) — 커버율·결측 판정에서 뺀다
 
 
 @dataclass(frozen=True)
@@ -112,6 +113,10 @@ class Config:
     def expected_period_s(self, device_id: str) -> int:
         ov = self.devices.get(device_id)
         return (ov.expected_period_s if ov and ov.expected_period_s else 60)
+
+    def is_periodic(self, device_id: str) -> bool:
+        ov = self.devices.get(device_id)
+        return ov.periodic if ov else True
 
     def all_topics(self) -> list[str]:
         out = []
@@ -194,7 +199,10 @@ def build_config(raw: Any, path: str = "<설정>") -> Config:
         per = d.get("expected_period_s")
         if per is not None and (not isinstance(per, int) or per <= 0):
             errs.append(f"{where}.expected_period_s: 양의 정수여야 함")
-        devices[str(did)] = DeviceOverride(sp, per, bool(d.get("enabled", True)))
+        unknown = set(d) - {"space", "expected_period_s", "enabled", "periodic"}
+        if unknown:
+            errs.append(f"{where}: 알 수 없는 키 {sorted(unknown)}")
+        devices[str(did)] = DeviceOverride(sp, per, bool(d.get("enabled", True)), bool(d.get("periodic", True)))
 
     # items
     items: dict[str, ItemDef] = {}
