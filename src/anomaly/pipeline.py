@@ -183,14 +183,18 @@ def run_score(work: Work, device, detectors=None, log=print):
             res.update(score_rules(work, period))
         if {"drift_night", "drift_peer"} & set(detectors):
             res.update(score_drift(work, period))
-        if "forecast_err" in detectors:
-            from .forecast_err import score_forecast_err
-            res["forecast_err"] = score_forecast_err(work, device, period)
         for d, df in res.items():
             if d not in detectors:
                 continue
             df.to_parquet(work.root / "scores" / f"{d}__{period}.parquet", index=False)
             log(f"  점수 {d} {period}: {len(df):,}칸")
+    if "forecast_err" in detectors:
+        # 과제 3 모델 묶음 필요. 잔차는 검증 기간 MAD로만 정규화한다
+        from .forecast_err import finalize_scores, score_forecast_err
+        val, test = finalize_scores(score_forecast_err(work, device, "val"), score_forecast_err(work, device, "test"))
+        for period, df in (("val", val), ("test", test)):
+            df.to_parquet(work.root / "scores" / f"forecast_err__{period}.parquet", index=False)
+            log(f"  점수 forecast_err {period}: {len(df):,}칸")
 
 
 # ---------- 4. 임계값(검증 기간만) ----------

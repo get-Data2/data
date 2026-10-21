@@ -66,7 +66,10 @@ def cmd_evaluate(args, cfg):
     from .alarms import ThresholdMissingError
     from .pipeline import run_evaluate
     try:
-        run_evaluate(_work(cfg))
+        work = _work(cfg)
+        run_evaluate(work)
+        from .bundle import save_bundle
+        save_bundle(work)
     except ThresholdMissingError as e:
         print(f"평가 거부: {e}")
         return EXIT_THRESHOLD

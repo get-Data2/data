@@ -41,6 +41,12 @@ def test_full_flow_and_gates(work):
     card = pd.DataFrame(res["groups"]["combined"]["scorecard"])
     assert list(card["kind"]) == ["F1", "F2", "F3", "F4", "F5", "전체"]
     assert res["curve"] and any(r["chosen"] for r in res["curve"])
+    from anomaly.bundle import save_bundle
+    from anomaly.report import write_reports
+    b = save_bundle(work, log)
+    assert (b / "bundle.json").exists() and list(b.glob("ae_*.pt"))
+    files = write_reports(work, work.root / "deliv", work.root / "adv")
+    assert len(files) >= 4 and all(f.read_text().startswith("# 과제 4") for f in files)
     # 임계값 누수 없음: 평가판 점수를 망가뜨리고 다시 정해도 같다
     p = work.root / "scores" / "ae__test.parquet"
     df = pd.read_parquet(p)
