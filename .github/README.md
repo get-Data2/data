@@ -10,7 +10,7 @@
 
 | 과제 | 상태 | 계획(spec) | 코드 |
 |---|---|---|---|
-| 1. 데이터 수집 체계 | 🟢 상시 수집 중 (2026-10-20~), 24h 보고·재부팅 시험 남음 | [001-data-collection](https://github.com/get-Data2/data-docs/tree/main/specs/001-data-collection) | `src/collector/` |
+| 1. 데이터 수집 체계 | 🟢 완료·상시 수집 중 (2026-10-20~), 24h 최종표만 남음 — [산출물](https://github.com/get-Data2/data-docs/blob/main/docs/tasks/task1-data-collection.md) | [001-data-collection](https://github.com/get-Data2/data-docs/tree/main/specs/001-data-collection) | `src/collector/` |
 | 2. 데이터 이해와 기준선 | 🟡 spec 초안 | [002-data-baseline](https://github.com/get-Data2/data-docs/tree/main/specs/002-data-baseline) | — |
 | 3. 60분 예측 | ⚪ 대기 | — | — |
 | 4. 이상 탐지 | ⚪ 대기 | — | — |

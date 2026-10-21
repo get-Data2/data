@@ -34,6 +34,7 @@
 | `deploy/` | systemd 사용자 서비스·설치 스크립트 |
 | `tests/` | pytest (`unit`/`broker`/`mysql`/`live` 마커) |
 | `docs/` | 결과·운영 문서, `docs/reports/` 측정 결과 |
+| `docs/tasks/taskN-*.md` | **과제별 산출물 문서**. README의 해결할 것·확인 기준·산출물·생각해 볼 점·심화(B)를 항목마다 대응시키고 결과·측정 조건·해석을 채운다. 과제를 마칠 때 반드시 갱신 |
 | `var/` | 실행 산출물(스풀·로그), git 제외 |
 
 ## Git (작업 폴더 하나, 저장소 둘)
