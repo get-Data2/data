@@ -61,3 +61,26 @@ def parse_csv(text: str) -> list[dict]:
             continue
         out.append(dict(zip(head, r)))
     return out
+
+
+class FileReader:
+    """맥(내부망)에서 받아 온 CSV로 InfluxReader.query를 대신한다(2026-10-21: 보드 유선망이 끊김).
+    파일은 내보내기 스크립트가 같은 Flux 문장으로 받은 annotated CSV다: infer.csv, chunk_<시작UTC>.csv."""
+
+    def __init__(self, folder: str | Path, bucket: str):
+        self.dir = Path(folder)
+        self.bucket = bucket
+
+    def query(self, flux: str) -> list[dict]:
+        import re
+        if 'keep(columns:["device_id","location","point"])' in flux:
+            name = "infer.csv"
+        else:
+            m = re.search(r"range\(start: (\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)Z,", flux)
+            if not m:
+                raise RuntimeError("파일 적재에서는 --start를 지정해야 한다(첫 데이터 조회 불가)")
+            name = "chunk_{}{}{}T{}{}{}Z.csv".format(*m.groups())
+        p = self.dir / name
+        if not p.exists():
+            raise RuntimeError(f"내보낸 파일이 없음: {p} — 맥에서 내보내기 스크립트를 다시 실행")
+        return parse_csv(p.read_text(encoding="utf-8"))

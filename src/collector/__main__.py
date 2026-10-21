@@ -58,17 +58,58 @@ def cmd_backfill(args, cfg):
     from .influx import InfluxReader
     from .timeutil import KST, UTC
     logging.basicConfig(level="INFO", format="%(asctime)s %(levelname)s %(message)s")
-    try:
-        reader = InfluxReader(args.env, cfg.backfill["bucket"])
-    except Exception as e:
-        print(f"InfluxDB 접속 실패: {type(e).__name__}: {e}", file=sys.stderr)
-        sys.exit(EXIT_EXTERNAL)
-    conn = _connect(args)
-
     def day(s):
         return datetime.strptime(s, "%Y-%m-%d").replace(tzinfo=KST).astimezone(UTC) if s else None
+    start = day(args.start)
+    if args.from_dir:
+        # 맥에서 받아 온 CSV로 적재(보드 유선망 단절 대응). 시작은 파일 중 가장 이른 구간
+        import os
+        from pathlib import Path
+        from dotenv import load_dotenv
+        from .influx import FileReader
+        load_dotenv(args.env, override=False)
+        reader = FileReader(args.from_dir, os.environ.get("INFLUX_BUCKET") or cfg.backfill["bucket"])
+        files = sorted(Path(args.from_dir).glob("chunk_*.csv"))
+        if not files:
+            print(f"{args.from_dir}에 chunk_*.csv가 없음", file=sys.stderr)
+            sys.exit(EXIT_EXTERNAL)
+        if start is None:
+            start = datetime.strptime(files[0].stem[6:], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+    else:
+        try:
+            reader = InfluxReader(args.env, cfg.backfill["bucket"])
+        except Exception as e:
+            print(f"InfluxDB 접속 실패: {type(e).__name__}: {e}", file=sys.stderr)
+            sys.exit(EXIT_EXTERNAL)
+    conn = _connect(args)
     bf = Backfill(cfg, reader, conn, cfg.storage["table_prefix"])
-    print(bf.run(start=day(args.start), end=day(args.end), max_chunks=args.max_chunks, dry_run=args.dry_run))
+    print(bf.run(start=start, end=day(args.end), max_chunks=args.max_chunks, dry_run=args.dry_run))
+
+
+def cmd_influx_export_script(args, cfg):
+    """맥(내부망)용 내보내기 스크립트를 var/에 만든다. 토큰은 넣지 않는다."""
+    import os
+    from datetime import datetime
+    from pathlib import Path
+    from dotenv import load_dotenv
+    from .backfill import Backfill, plan_chunks
+    from .influx_export import make_script
+    from .timeutil import KST, UTC
+    load_dotenv(args.env, override=False)
+    url = os.environ["INFLUX_URL"].rstrip("/")
+    bucket = os.environ.get("INFLUX_BUCKET") or cfg.backfill["bucket"]
+    conn = _connect(args)
+    bf = Backfill(cfg, None, conn, cfg.storage["table_prefix"])
+    end = bf.cutoff() if not args.end else datetime.strptime(args.end, "%Y-%m-%d").replace(tzinfo=KST).astimezone(UTC)
+    done = sorted(bf.progress["done"])
+    start = (datetime.strptime(args.start, "%Y-%m-%d").replace(tzinfo=KST).astimezone(UTC) if args.start
+             else datetime.fromisoformat(done[0]) if done else end)
+    chunks = plan_chunks(cfg, bf.progress, start, end)
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(make_script(cfg, url, bucket, chunks, end, out.name), encoding="utf-8")
+    out.chmod(0o700)
+    print(f"남은 구간 {len(chunks)}개 → {out} (토큰 없음, 내부 주소 포함 — 저장소에 올리지 않는다)")
 
 
 def cmd_check(args, cfg):
@@ -115,7 +156,14 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--end", help="끝 날짜 KST YYYY-MM-DD (기본: 수집기 첫 수신 시각)")
     s.add_argument("--max-chunks", type=int, default=None, help="이번 실행에서 처리할 구간 수 상한")
     s.add_argument("--dry-run", action="store_true", help="범위만 보여 주고 적재하지 않음")
+    s.add_argument("--from-dir", help="InfluxDB 대신 맥에서 받아 온 CSV 폴더로 적재(influx-export-script로 받은 것)")
     s.set_defaults(func=cmd_backfill)
+
+    s = sub.add_parser("influx-export-script", help="맥(내부망)용 InfluxDB 내보내기 스크립트 만들기(토큰 없음)")
+    s.add_argument("--start", help="시작 날짜 KST YYYY-MM-DD (기본: 적재 기록의 첫 구간 — 끝난 구간은 빠짐)")
+    s.add_argument("--end", help="끝 날짜 KST YYYY-MM-DD (기본: 수집기 첫 수신 시각)")
+    s.add_argument("--out", default="var/influx_export/influx_export.sh")
+    s.set_defaults(func=cmd_influx_export_script)
 
     s = sub.add_parser("replay", help="메시지 파일을 해석만 해 보기(저장 안 함)")
     s.add_argument("--file", required=True)

@@ -28,6 +28,39 @@ def _flt(cfg) -> str:
     return " or ".join(f'r._measurement=="{m}"' for m in ms)
 
 
+def flux_infer(bucket: str, cfg, stop: datetime) -> str:
+    """장치 추론표 조회(태그 있는 행의 (location, point) → device_id). 맥 내보내기 스크립트도 같은 문장을 쓴다."""
+    return (f'from(bucket:"{bucket}") |> range(start: 0, stop: {stop.strftime("%Y-%m-%dT%H:%M:%SZ")}) '
+            f'|> filter(fn:(r)=> ({_flt(cfg)}) and r._field=="value" and exists r.device_id) '
+            f'|> group(columns:["device_id","location","point"]) |> last() '
+            f'|> keep(columns:["device_id","location","point"]) |> group()')
+
+
+def flux_chunk(bucket: str, cfg, start: datetime, stop: datetime) -> str:
+    """한 구간 적재 조회. 맥 내보내기 스크립트도 같은 문장을 쓴다."""
+    return (f'from(bucket:"{bucket}") |> range(start: {start.strftime("%Y-%m-%dT%H:%M:%SZ")}, '
+            f'stop: {stop.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}) '
+            f'|> filter(fn:(r)=> ({_flt(cfg)}) and r._field=="value") '
+            f'|> keep(columns:["_time","_value","_measurement","device_id","location","point","spot"]) |> group()')
+
+
+def chunk_file(start: datetime) -> str:
+    return f"chunk_{start.strftime('%Y%m%dT%H%M%SZ')}.csv"
+
+
+def plan_chunks(cfg, progress: dict, start: datetime, end: datetime) -> list[tuple[datetime, datetime]]:
+    """run()과 같은 구간 나누기(UTC 자정 기준 chunk_hours)에서 아직 끝나지 않은 구간."""
+    step = timedelta(hours=cfg.backfill["chunk_hours"])
+    t = start.replace(hour=0, minute=0, second=0, microsecond=0)
+    out = []
+    while t < end:
+        b = min(t + step, end)
+        if progress["done"].get(t.isoformat(), {}).get("stop") != b.isoformat():
+            out.append((t, b))
+        t += step
+    return out
+
+
 def infer_table(rows: list[dict]) -> dict[tuple[str, str], str]:
     """(location, point) → device_id. 둘 이상의 장치가 같은 조합을 쓰면 특정할 수 없으므로 뺀다."""
     seen: dict[tuple[str, str], set[str]] = {}
@@ -107,23 +140,12 @@ class Backfill:
         return parse_time(rows[0]["_time"])
 
     def build_infer(self, stop: datetime) -> dict:
-        b = self.reader.bucket
-        rows = self.reader.query(
-            f'from(bucket:"{b}") |> range(start: 0, stop: {stop.strftime("%Y-%m-%dT%H:%M:%SZ")}) '
-            f'|> filter(fn:(r)=> ({_flt(self.cfg)}) and r._field=="value" and exists r.device_id) '
-            f'|> group(columns:["device_id","location","point"]) |> last() '
-            f'|> keep(columns:["device_id","location","point"]) |> group()')
-        return infer_table(rows)
+        return infer_table(self.reader.query(flux_infer(self.reader.bucket, self.cfg, stop)))
 
     # ---------- 적재 ----------
 
     def load_chunk(self, start: datetime, stop: datetime, infer: dict) -> dict:
-        b = self.reader.bucket
-        rows = self.reader.query(
-            f'from(bucket:"{b}") |> range(start: {start.strftime("%Y-%m-%dT%H:%M:%SZ")}, '
-            f'stop: {stop.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}) '
-            f'|> filter(fn:(r)=> ({_flt(self.cfg)}) and r._field=="value") '
-            f'|> keep(columns:["_time","_value","_measurement","device_id","location","point","spot"]) |> group()')
+        rows = self.reader.query(flux_chunk(self.reader.bucket, self.cfg, start, stop))
         skipped: Counter = Counter()
         meas, devs = [], {}
         for r in rows:
