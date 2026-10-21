@@ -25,9 +25,12 @@ devices:                     # 장치 단위 덮어쓰기(태그가 틀리거나
   24e124136d151523: {expected_period_s: 600}   # EM300-TH 실습실 복도(2026-10-20~21 수집기 관측 10분)
   54427240-8598-11f1-bcac-bdfb397bbe8a: {expected_period_s: 120}   # xflow 개발실 실내기(간격 60초·120초 혼재, 2026-10-20~21 실측)
   c71aa2c0-859c-11f1-bcac-bdfb397bbe8a: {expected_period_s: 120}   # xflow 개발실 실외기(같음)
-  # 사건형 센서(WS301 문 열림): 주기 보고가 아니라 열림·닫힘 때만 보낸다 → 커버율·결측 판정 제외
-  24e124141d189196: {periodic: false}          # 사무실 출입문
-  24e124141d229577: {periodic: false}          # 창고
+  # 사건형 센서(WS301 문 열림): 열림·닫힘 때 보내고, 평소에는 18시간마다 생존 보고(배터리) — 과거 데이터 실측 간격 중앙값 18.00시간
+  # → 커버율·결측 판정은 제외(periodic: false), 끊김 판정은 18시간 × 2 기준
+  24e124141d189196: {periodic: false, expected_period_s: 64800}   # 사무실 출입문
+  24e124141d229577: {periodic: false, expected_period_s: 64800}   # 창고 입구
+  24e124141d180806: {periodic: false, expected_period_s: 64800}   # 실습실 앞문(과거 데이터에서만 확인)
+  24e124141d189796: {periodic: false, expected_period_s: 64800}   # 실습실 뒷문(과거 데이터에서만 확인)
   # 24e124xxxxxxxxxx: {expected_period_s: 600}
   # 24e124yyyyyyyyyy: {enabled: false}
 

@@ -136,6 +136,8 @@ class Data:
     stats_minutes: set[int] = field(default_factory=set)
     events: list[Event] = field(default_factory=list)
     battery: dict[str, float] = field(default_factory=dict)
+    live_since: datetime | None = None    # 수집기 실시간 첫 수신
+    influx_end: datetime | None = None    # 과거 적재 마지막 시각
 
 
 def fetch(conn, prefix: str, start: datetime, end: datetime, space: str | None = None) -> Data:
@@ -187,6 +189,12 @@ def fetch(conn, prefix: str, start: datetime, end: datetime, space: str | None =
                     f"SELECT device_id, MAX(ts) ts FROM `{p}measurement` WHERE item='battery' AND ts>=%s AND ts<%s "
                     f"GROUP BY device_id) x ON m.device_id=x.device_id AND m.ts=x.ts AND m.item='battery'", [s, e])
         d.battery = {dev: float(v) for dev, v in cur.fetchall()}
+        cur.execute(f"SELECT MIN(received_at) FROM `{p}measurement` WHERE source<>'influx'")
+        v = cur.fetchone()[0]
+        d.live_since = v.replace(tzinfo=UTC) if v else None
+        cur.execute(f"SELECT MAX(ts) FROM `{p}measurement` WHERE source='influx'")
+        v = cur.fetchone()[0]
+        d.influx_end = v.replace(tzinfo=UTC) if v else None
     for dev in d.devices:
         d.device_minutes.setdefault(dev, set())
     return d
@@ -240,7 +248,8 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
                      f"95% 미만 {len(low)}개" + (": " + ", ".join(
                          f"{_space_label(d, k[0])} {k[1]} {_pct(v)}" for v, k in low[:6]) if low else ""))
 
-    # ① 미매핑·끊김 장치
+    # ① 미매핑·끊김 장치 — 끊김 기준은 장치마다 max(stale_after_s, 기대 주기 × 2)
+    #   (문 센서처럼 18시간마다 보고하는 장치를 10분 기준으로 판정하면 오판한다. 2026-10-21 실제 발생)
     stale_s = cfg.report["stale_after_s"]
     rows = []
     for dev, info in sorted(d.devices.items()):
@@ -249,18 +258,21 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
             problems.append(f"공간 미지정(원천 표기 '{info['raw_location']}')")
         last = info["last_seen"]
         last_utc = last.replace(tzinfo=UTC) if last is not None else None
-        if not cfg.is_periodic(dev):
-            if last_utc is not None and (d.end - last_utc).total_seconds() > 86400:
-                problems.append(f"사건형 센서 {(d.end - last_utc).total_seconds() / 86400:.0f}일째 무신호")
-        elif not d.device_minutes.get(dev):
-            if last_utc is not None and last_utc < d.start:
-                problems.append(f"수신 중단: {(d.end - last_utc).total_seconds() / 86400:.0f}일째 없음(고장·배터리·철거)")
+        limit = max(stale_s, 2 * period(dev))
+        age = (d.end - last_utc).total_seconds() if last_utc is not None else None
+        if age is not None and age > limit:
+            observed = (d.end - d.live_since).total_seconds() if d.live_since else 0
+            near_load_end = (info.get("source") == "influx" and d.influx_end is not None
+                             and abs((last_utc - d.influx_end).total_seconds()) < 2 * period(dev))
+            if near_load_end:
+                problems.append(f"판단 보류: 마지막 기록이 과거 적재 끝({kst(d.influx_end, '%m-%d')})과 겹침 — 이후 데이터 미적재")
+            elif observed < limit and info.get("source") == "influx":
+                problems.append(f"판단 보류: 실시간 관찰 {observed / 3600:.0f}시간 < 판정 기준 {limit / 3600:.0f}시간"
+                                f"(마지막 기록 {age / 86400:.0f}일 전)")
+            elif age >= 86400:
+                problems.append(f"수신 중단: {age / 86400:.0f}일째 없음(기준 {limit / 3600:.1f}시간)")
             else:
-                problems.append("기간 내 숫자 측정값 없음")
-        elif last is not None:
-            age = (d.end - last.replace(tzinfo=UTC)).total_seconds()
-            if age > stale_s:
-                problems.append(f"끊김: 기간 끝 기준 {age / 60:.0f}분째 수신 없음")
+                problems.append(f"끊김: {age / 60:.0f}분째 수신 없음(기준 {limit / 60:.0f}분)")
         bat = d.battery.get(dev)
         if bat is not None and bat <= cfg.report["battery_warn_pct"]:
             problems.append(f"배터리 {bat:.0f}% — 교체 필요")

@@ -115,3 +115,28 @@ def test_cause_mqtt_first():
     dm = dev_minutes(missing_a=range(S + 10, S + 13))
     h = cause_hint((S + 10, S + 13), "a", dm, set(range(S, E)), [Event(S + 10.5, "mqtt_disconnected", "Keep alive timeout")])
     assert h.startswith("MQTT 끊김")
+
+
+def test_stale_judgement_respects_period_and_coverage(config):
+    """18시간 주기 문 센서를 10분 기준으로 '수신 중단' 판정하지 않는다. 과거 적재 끝과 겹치면 판단 보류(2026-10-21 오판 사례)."""
+    import dataclasses
+    from datetime import timedelta
+    from collector.config import DeviceOverride
+    cfg = dataclasses.replace(config, devices={**config.devices,
+                                               "door": DeviceOverride(periodic=False, expected_period_s=64800),
+                                               "door2": DeviceOverride(periodic=False, expected_period_s=64800)})
+    end = datetime(2026, 10, 21, 1, 0, tzinfo=timezone.utc)
+    d = Data(end - timedelta(hours=1), end)
+    d.spaces = {"lab": ("실습실", "classroom")}
+    d.live_since = end - timedelta(hours=17)
+    d.influx_end = datetime(2026, 7, 23, 0, 0, tzinfo=timezone.utc)
+    base = {"model": None, "space_id": "lab", "raw_location": "실습실", "mapped_by": "alias", "expected_period_s": 60}
+    d.devices = {
+        "dead": {**base, "device_id": "dead", "source": "influx", "last_seen": datetime(2026, 5, 10)},          # 1분 주기
+        "door": {**base, "device_id": "door", "source": "influx", "last_seen": datetime(2026, 5, 9)},           # 18시간 주기
+        "door2": {**base, "device_id": "door2", "source": "influx", "last_seen": datetime(2026, 7, 22, 20, 0)},  # 적재 끝 근처
+    }
+    text = build_report(d, cfg, now=end)
+    assert "| dead |" in text and "수신 중단" in text.split("| dead |")[1].split("\n")[0]
+    assert "실시간 관찰 17시간 < 판정 기준 36시간" in text
+    assert "과거 적재 끝" in text.split("| door2 |")[1].split("\n")[0]
