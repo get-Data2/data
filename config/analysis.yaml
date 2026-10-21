@@ -26,8 +26,9 @@ axis_b:                            # 실제 사건 — 공간·시간 패턴(축
   fire:      {min_sensors: 2, temp_rise_c: 5, window_min: 30, humidity_drop: true}
   leak:      {humidity_min: 95, min_duration_min: 30}
   crowding:  {co2_floor: 2500, train_quantile: 0.999, min_sensors: 2, single_sensor_min_bins: 3}
-  outlier:   {mad_k: 10}           # B0 의심
-  stuck:     {min_hours: 2, require_others_change: true}
+  outlier:   {mad_k: 10, min_scale: {co2: 30, temperature: 0.3, humidity: 2}}   # B0 의심 — 센서별 편향·MAD, 분해능 미만 MAD는 바닥값
+  stuck:     {min_hours: 2, require_others_change: true,
+              others_min_change: {co2: 50, temperature: 1.0, humidity: 3}}   # 밤 안정기 양자화 반복을 거르기 위함
 
 space:
   aggregate: median                # 센서 칸 평균의 중앙값
