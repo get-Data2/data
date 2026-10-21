@@ -42,7 +42,7 @@ defaults:                            # D0 기본 설정
   train: {lr: 0.001, weight_decay: 0.0001, batch: 512, max_epochs: 40, patience_lr: 5, patience_stop: 8}
 
 stages:                              # 단계마다 바꿀 값(앞 단계 선택이 누적 적용됨)
-  D1: {lookback_min: [30, 120, 1440]}
+  D1: {lookback_min: [30, 120, 240]}  # 하루(1440)는 2026-10-21 제외: 검증 2% 개선에 학습 7배·메모리 3.6GB(research R14)
   D2: {features: [[sensors], [sensors, time], [sensors, time, space], [sensors, time, space, schedule]]}
   D3: {output: [direct, recursive]}
   D4: {target: [delta, value]}
