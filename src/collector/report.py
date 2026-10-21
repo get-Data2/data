@@ -248,12 +248,22 @@ def build_report(d: Data, cfg, synthetic: bool = False, by: str | None = None,
         if info["mapped_by"] == "none" or info["space_id"] == "unmapped":
             problems.append(f"공간 미지정(원천 표기 '{info['raw_location']}')")
         last = info["last_seen"]
-        if not d.device_minutes.get(dev):
-            problems.append("기간 내 숫자 측정값 없음(퇴역·문 열림 센서처럼 문자열만 보내는 장치)")
-        elif last is not None and cfg.is_periodic(dev):
+        last_utc = last.replace(tzinfo=UTC) if last is not None else None
+        if not cfg.is_periodic(dev):
+            if last_utc is not None and (d.end - last_utc).total_seconds() > 86400:
+                problems.append(f"사건형 센서 {(d.end - last_utc).total_seconds() / 86400:.0f}일째 무신호")
+        elif not d.device_minutes.get(dev):
+            if last_utc is not None and last_utc < d.start:
+                problems.append(f"수신 중단: {(d.end - last_utc).total_seconds() / 86400:.0f}일째 없음(고장·배터리·철거)")
+            else:
+                problems.append("기간 내 숫자 측정값 없음")
+        elif last is not None:
             age = (d.end - last.replace(tzinfo=UTC)).total_seconds()
             if age > stale_s:
                 problems.append(f"끊김: 기간 끝 기준 {age / 60:.0f}분째 수신 없음")
+        bat = d.battery.get(dev)
+        if bat is not None and bat <= cfg.report["battery_warn_pct"]:
+            problems.append(f"배터리 {bat:.0f}% — 교체 필요")
         if problems:
             rows.append([dev, info["model"], _space_label(d, info["space_id"]), kst(last), "; ".join(problems)])
     parts += ["", "## ① 확인 필요 장치(미매핑·끊김)",

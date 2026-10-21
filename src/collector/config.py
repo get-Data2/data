@@ -22,7 +22,7 @@ DEFAULTS: dict[str, dict[str, Any]] = {
              "client_id": "wonil-collector"},
     "storage": {"table_prefix": "", "batch_rows": 1000, "flush_interval_s": 2},
     "spool": {"path": "var/spool.db", "max_rows": 400000},
-    "report": {"stale_after_s": 600, "gap_min_minutes": 2},
+    "report": {"stale_after_s": 600, "gap_min_minutes": 2, "battery_warn_pct": 20},
     "backfill": {"bucket": "iot-bucket", "measurements": [], "chunk_hours": 24,
                  "progress_path": "var/backfill_progress.json", "batch_rows": 5000},
 }

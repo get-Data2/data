@@ -75,7 +75,7 @@ timing:
 mqtt:    {keepalive_s: 30, reconnect_max_s: 30, stale_reconnect_s: 300, qos: 1, client_id: team2-jetson-collector-a1}
 storage: {table_prefix: "", batch_rows: 1000, flush_interval_s: 2}
 spool:   {path: var/spool.db, max_rows: 400000}
-report:  {stale_after_s: 600, gap_min_minutes: 2}
+report:  {stale_after_s: 600, gap_min_minutes: 2, battery_warn_pct: 20}   # 배터리 이 값 이하면 ①표에 교체 경고
 
 # InfluxDB 과거 데이터 적재(python -m collector backfill) — InfluxDB는 조회만 한다. 접속 정보는 .env
 backfill:
