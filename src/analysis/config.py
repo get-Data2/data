@@ -124,5 +124,7 @@ def load_analysis_config(path: str | Path = "config/analysis.yaml",
                 periods[str(dev)] = int(d["expected_period_s"])
             if d.get("periodic") is False:
                 periodic[str(dev)] = False
-    digest = hashlib.sha256(json.dumps(raw, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()[:12]
+    # 보고서 위치·글꼴(report)은 결과 값에 영향이 없으므로 규칙 버전(해시)에서 뺀다
+    rules = {k: v for k, v in raw.items() if k != "report"}
+    digest = hashlib.sha256(json.dumps(rules, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()[:12]
     return AnalysisConfig(str(path), raw, splits, periods, periodic, digest)

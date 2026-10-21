@@ -69,5 +69,6 @@ schedule:                          # 고정 일과표(2026-10-21 결정). 실제
   reaction: {pre_min: 15, window_min: 60, delta_ppm: 30, nonclass_use_ppm: 150}   # 비수업일 하루 상승폭이 이 이상이면 "사용"
 
 report:
-  out_dir: docs/reports/task2
+  out_dir: docs/reports/task2                 # 상세 기록(진단 상세 표, 사건 목록)
+  deliverable_dir: docs/deliverables/task2    # README 산출물(기준선 성능표, 진단서 그래프 figures/)
   font: "Noto Sans CJK KR"

@@ -33,8 +33,10 @@
 | `config/` | 동작 설정(YAML, 비밀 없음) |
 | `deploy/` | systemd 사용자 서비스·설치 스크립트 |
 | `tests/` | pytest (`unit`/`broker`/`mysql`/`live` 마커) |
-| `docs/` | 결과·운영 문서, `docs/reports/` 측정 결과 |
-| `docs/tasks/taskN-*.md` | **과제별 산출물 문서**. README의 해결할 것·확인 기준·산출물·생각해 볼 점·심화(B)를 항목마다 대응시키고 결과·측정 조건·해석을 채운다. **기능별 확인 명령(명령·입력 위치·정상 결과)**을 실제로 실행해 맞춘 뒤 적는다. 과제를 마칠 때 반드시 갱신 |
+| `docs/` | 문서(아래 하위 폴더). 첫 화면 `docs/README.md` |
+| `docs/deliverables/taskN/` | **산출물만**(README 각 과제의 "산출물" 항목: 보고서·표·그래프). 목차 `docs/deliverables/README.md` |
+| `docs/tasks/taskN-*.md` | **과제별 점검 문서**. README의 해결할 것·확인 기준·생각해 볼 점·심화(B)를 항목마다 대응시키고 결과·측정 조건·해석을 채운다. 산출물 본문은 넣지 않고 `deliverables/`로 연결. **기능별 확인 명령(명령·입력 위치·정상 결과)**을 실제로 실행해 맞춘 뒤 적는다. 과제를 마칠 때 반드시 갱신 |
+| `docs/ops/`, `docs/advanced/`, `docs/reports/` | 운영 가이드 / 심화(B) 결과 / 측정·작업 기록(자동 생성 상세 표 포함) |
 | `var/` | 실행 산출물(스풀·로그), git 제외 |
 
 ## Git (작업 폴더 하나, 저장소 둘)
@@ -48,4 +50,4 @@
 - [ ] 과제 1 데이터 수집 체계 — 핵심 완료·상시 수집 중(2026-10-20 16:33~). 남은 것: 24h 최종 보고(10-21 16:40 이후), 재부팅 시험(사용자 일정),
   InfluxDB 미적재 90일·장치 미특정 75만 행 복원(유선망 복구 대기). 연결 점검: `python -m collector check`
 - [x] 과제 2 데이터 이해와 기준선 — 완료(2026-10-21). 분할 `v1-provisional`이 과제 3~6 공식 평가 기준(`var/eval/eval_points_v1-provisional.parquet`).
-  `v2-final`(2학기 시험)은 InfluxDB 적재 후 추가 비교(선택). 산출물 `docs/tasks/task2-data-baseline.md`
+  `v2-final`(2학기 시험)은 InfluxDB 적재 후 추가 비교(선택). 산출물 `docs/deliverables/task2/`, 점검 `docs/tasks/task2-data-baseline.md`

@@ -115,7 +115,7 @@ def run_baseline(cfg, split_name=None) -> str:
 
     t_all, t_use = mae_table(res, "all", cfg), mae_table(res, "usage", cfg)
     md = report_markdown(cfg, sp, res, t_all, t_use, sha)
-    out = Path(cfg["report"]["out_dir"])
+    out = Path(cfg["report"]["deliverable_dir"])
     out.mkdir(parents=True, exist_ok=True)
     (out / f"baseline_{sp.name}.md").write_text(md, encoding="utf-8")
     return _table(t_all) + f"\n\n평가 시점 {len(pts):,}행, sha256 {sha[:16]} → {p_pts}\n보고서 → {out}/baseline_{sp.name}.md"

@@ -1,10 +1,11 @@
-"""데이터 진단(FR-008~012): 표·그래프·진단서 Markdown(docs/reports/task2/diagnosis_<split>.md).
+"""데이터 진단(FR-008~012): 상세 표 Markdown(report.out_dir/diagnosis_<split>.md)과 그래프(report.deliverable_dir/figures/).
 
 모든 통계는 지정한 분할의 **학습 기간**에서 계산한다(시험 기간 정보 누수 방지). 그래프는 PNG로 같은 폴더에 둔다.
 """
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import matplotlib
@@ -215,6 +216,9 @@ def run_diagnose(cfg, split_name=None) -> str:
     _setup_font(cfg)
     out = Path(cfg["report"]["out_dir"])
     out.mkdir(parents=True, exist_ok=True)
+    fig_dir = Path(cfg["report"]["deliverable_dir"]) / "figures"
+    fig_dir.mkdir(parents=True, exist_ok=True)
+    fig_rel = Path(os.path.relpath(fig_dir, out))
     ss = load_series("space")
     sb = load_series("sensor")
     qt = quality_table(cfg)
@@ -225,7 +229,7 @@ def run_diagnose(cfg, split_name=None) -> str:
     ac = autocorr_table(ss, sp, cfg)
     lags, mm = reaction_analysis(ss, sp, cfg)
     rt = reaction_table(lags)
-    figs = plot_patterns(ss, sp, cfg, out) + [plot_reaction(lags, sp, out)]
+    figs = plot_patterns(ss, sp, cfg, fig_dir) + [plot_reaction(lags, sp, fig_dir)]
     ev_md = (out / "events.md").exists()
     ev = pd.read_parquet(cache_dir(cfg) / "events.parquet") if (cache_dir(cfg) / "events.parquet").exists() else pd.DataFrame()
 
@@ -246,7 +250,7 @@ def run_diagnose(cfg, split_name=None) -> str:
     a, b = sp.train
     md = [f"# 데이터 진단 상세 (과제 2, 분할 {sp.name})", "",
           f"- 측정 조건: 실데이터, 학습 기간 {a} ~ {b}(KST) 기준 통계, 분석 간격 {cfg['interval']['minutes']}분, 설정 {cfg.digest}",
-          "- 다시 만들기: `analysis diagnose` (요약·해석은 `docs/tasks/task2-data-baseline.md`)", "",
+          "- 다시 만들기: `analysis diagnose` (해석은 산출물 `docs/deliverables/task2/01-data-diagnosis.md`)", "",
           "## 사실 요약(자동)", ""] + [f"- {f}" for f in facts] + [
           "", "## 1. 정제 결과(축 A, 전체 기간)", "", _table(qt), "",
           "## 2. 결측(학습 기간, 공간 대표값)", "", _table(mt), "",
@@ -255,10 +259,10 @@ def run_diagnose(cfg, split_name=None) -> str:
           "## 4. 분석 간격 후보 비교(실습실 CO₂, 2025-10)", "", _table(ic), "",
           "## 5. 짧은 결측 보간 시험(학습 기간, 인위 결측)", "", _table(it), "",
           "## 6. 자기상관(학습 기간, 관측 칸)", "", _table(ac), "",
-          "## 7. 평일 시간대 패턴", "", *(f"![{f}]({f})" for f in figs[:2]), "",
-          "## 8. 일정–CO₂ 반응 지연(고정 일과표)", "", _table(rt), "", f"![{figs[2]}]({figs[2]})", "",
+          "## 7. 평일 시간대 패턴", "", *(f"![{f}]({fig_rel / f})" for f in figs[:2]), "",
+          "## 8. 일정–CO₂ 반응 지연(고정 일과표)", "", _table(rt), "", f"![{figs[2]}]({fig_rel / figs[2]})", "",
           "### 어긋나는 날(학습 기간)", "", _table(mm.head(40)) if len(mm) else "없음", "",
           "## 9. 사건 후보(축 B)", "", "[events.md](events.md)" if ev_md else "없음", ""]
     p = out / f"diagnosis_{sp.name}.md"
     p.write_text("\n".join(md), encoding="utf-8")
-    return "\n".join(["사실 요약:"] + [f"- {f}" for f in facts] + [f"→ {p}, 그래프 {len(figs)}개"])
+    return "\n".join(["사실 요약:"] + [f"- {f}" for f in facts] + [f"→ {p}, 그래프 {len(figs)}개 → {fig_dir}"])
