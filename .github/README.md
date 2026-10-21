@@ -11,7 +11,7 @@
 | 과제 | 상태 | 계획(spec) | 코드 |
 |---|---|---|---|
 | 1. 데이터 수집 체계 | 🟢 완료·상시 수집 중 (2026-10-20~), 24h 최종표만 남음 — [산출물](https://github.com/get-Data2/data-docs/blob/main/docs/tasks/task1-data-collection.md) | [001-data-collection](https://github.com/get-Data2/data-docs/tree/main/specs/001-data-collection) | `src/collector/` |
-| 2. 데이터 이해와 기준선 | 🟡 잠정 결과(`v1`), 확정은 InfluxDB 적재 후 — [산출물](https://github.com/get-Data2/data-docs/blob/main/docs/tasks/task2-data-baseline.md) | [002-data-baseline](https://github.com/get-Data2/data-docs/tree/main/specs/002-data-baseline) | `src/analysis/` |
+| 2. 데이터 이해와 기준선 | 🟢 완료 — 분할 `v1`이 과제 3~6 평가 기준 — [산출물](https://github.com/get-Data2/data-docs/blob/main/docs/tasks/task2-data-baseline.md) | [002-data-baseline](https://github.com/get-Data2/data-docs/tree/main/specs/002-data-baseline) | `src/analysis/` |
 | 3. 60분 예측 | ⚪ 대기 | — | — |
 | 4. 이상 탐지 | ⚪ 대기 | — | — |
 | 5. 상태 추정 | ⚪ 대기 | — | — |
