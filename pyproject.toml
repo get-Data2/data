@@ -16,6 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8", "amqtt==0.12.*"]
+analysis = ["pandas>=3.0", "pyarrow>=26", "matplotlib>=3.11", "holidays>=0.107"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

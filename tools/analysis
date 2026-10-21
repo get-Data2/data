@@ -1,0 +1,5 @@
+#!/bin/sh
+# 어디서든 분석 명령 실행: analysis info | all | baseline ...
+# 프로젝트 폴더로 이동해 .venv의 파이썬으로 실행한다(설정·.env·var/ 상대 경로 때문).
+ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+cd "$ROOT" && exec "$ROOT/.venv/bin/python" -m analysis "$@"

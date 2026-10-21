@@ -1,0 +1,71 @@
+# 과제 2 분석 설정 — 정제·분할·일과표·임계값은 여기만 고친다.
+# 형식: specs/002-data-baseline/contracts/config.md (data-docs 저장소)
+# 장치별 기대 주기·사건형 여부는 과제 1 config/collector.yaml devices.* 를 그대로 읽는다(같은 결측 정의).
+version: 1
+
+extract:
+  items: [co2, temperature, humidity, battery]
+  start: "2025-08-08"              # KST 날짜
+  cache_dir: var/cache
+
+axis_a:                            # 센서 오류 — 값 하나 + 기종으로 판정(원본은 지우지 않음)
+  error_codes:                     # A1 — 2026-10-21 실측: CO2 65535 1,067건(1대), 0 2건
+    - {item: co2, values: [65535, 0]}
+  error_pairs:                     # A2 — 같은 장치·같은 시각에 함께 나오면 둘 다 error(실측 402건·3대)
+    - {temperature: -0.1, humidity: 127.5}
+  ranges:                          # A3 — 기본 범위, models로 기종별 덮어쓰기
+    co2: [0, 10000]
+    temperature: [-40, 85]
+    humidity: [0, 100]
+  saturation:                      # A4 — 측정 범위 끝값에 붙음. 오류가 아님, 축 B 재료
+    co2: {upper: 10000}            # 2026-10-21 실측: AM107이 정확히 10000 4건. AM103은 7,029까지 측정 → 5000은 상한이 아님
+  pair_tolerance_s: 1              # A2 쌍을 같은 장치 1초 안에서 찾음(과거분은 1ms 차이 행이 있음)
+  models: {}                       # 예: {AM103: {temperature: [0, 50]}} — 데이터시트 확인 후 추가
+
+axis_b:                            # 실제 사건 — 공간·시간 패턴(축 A error가 아닌 값만 사용)
+  fire:      {min_sensors: 2, temp_rise_c: 5, window_min: 30, humidity_drop: true}
+  leak:      {humidity_min: 95, min_duration_min: 30}
+  crowding:  {co2_floor: 2500, train_quantile: 0.999, min_sensors: 2, single_sensor_min_bins: 3}
+  outlier:   {mad_k: 10}           # B0 의심
+  stuck:     {min_hours: 2, require_others_change: true}
+
+space:
+  aggregate: median                # 센서 칸 평균의 중앙값
+  exclude_from_space: [24e124136d151523]     # 실습실 '복도' 센서 — 진단에는 사용
+  targets: [lab, office, meeting]            # 기준선 대상 공간
+
+gaps:
+  missing_factor: 2                # 결측 = 간격 > 기대 주기 × 2
+  short_max_min: 15                # 짧은 결측(보간) 상한
+  interpolation_test_min: [5, 10, 15, 30, 60]
+
+interval:
+  minutes: 5
+  candidates: [1, 5, 15]
+
+split:
+  active: v1-provisional
+  versions:
+    v1-provisional: {train: ["2025-09-04", "2026-03-31"], val: ["2026-04-02", "2026-05-09"], test: ["2026-05-27", "2026-07-22"]}
+    v2-final:       {train: ["2025-09-04", "2026-05-09"], val: ["2026-05-27", "2026-08-31"], test: ["2026-09-02", "2026-10-19"]}
+
+baseline:
+  items: [co2, temperature]
+  horizons_min: [5, 15, 30, 60]
+  mean_window_min: 60
+  mean_min_coverage: 0.5
+  usage_hours: {weekdays: [mon, tue, wed, thu, fri], start: "08:00", end: "19:00", exclude_holidays: true}
+
+schedule:                          # 고정 일과표(2026-10-21 결정). 실제 자료는 file(CSV)로 교체
+  file: null                       # 예: data/schedule.csv (열: space_id, weekday 또는 date, start, end, kind)
+  exclude_holidays: true
+  rows:
+    - {space: lab,    days: [mon, tue, wed, thu, fri], start: "09:00", end: "11:30", kind: class}
+    - {space: lab,    days: [mon, tue, wed, thu, fri], start: "13:00", end: "18:00", kind: class}
+    - {space: office, days: [mon, tue, wed, thu, fri], start: "09:00", end: "11:30", kind: work}
+    - {space: office, days: [mon, tue, wed, thu, fri], start: "13:00", end: "18:00", kind: work}
+  reaction: {pre_min: 15, window_min: 60, delta_ppm: 30}
+
+report:
+  out_dir: docs/reports/task2
+  font: "Noto Sans CJK KR"
