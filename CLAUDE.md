@@ -29,7 +29,7 @@
 | 위치 | 역할 |
 |---|---|
 | `specs/NNN-이름/` | 계획(Spec Kit: spec·plan·tasks) |
-| `src/<패키지>/` | 소스 코드 (과제별 패키지: `src/collector/` 과제 1, `src/analysis/` 과제 2) |
+| `src/<패키지>/` | 소스 코드 (과제별 패키지: `src/collector/` 과제 1, `src/analysis/` 과제 2, `src/forecast/` 과제 3) |
 | `config/` | 동작 설정(YAML, 비밀 없음) |
 | `deploy/` | systemd 사용자 서비스·설치 스크립트 |
 | `tests/` | pytest (`unit`/`broker`/`mysql`/`live` 마커) |
@@ -51,3 +51,4 @@
   InfluxDB 미적재 90일·장치 미특정 75만 행 복원(유선망 복구 대기). 연결 점검: `python -m collector check`
 - [x] 과제 2 데이터 이해와 기준선 — 완료(2026-10-21). 분할 `v1-provisional`이 과제 3~6 공식 평가 기준(`var/eval/eval_points_v1-provisional.parquet`).
   `v2-final`(2학기 시험)은 InfluxDB 적재 후 추가 비교(선택). 산출물 `docs/deliverables/task2/`, 점검 `docs/tasks/task2-data-baseline.md`
+- [ ] 과제 3 60분 예측 — spec·plan 완료(2026-10-21). GPU(Orin, torch cu130) 사용, 그룹 미반영 세션은 `sg video`/`sg render`. 계획 `specs/003-forecast-60min/`
