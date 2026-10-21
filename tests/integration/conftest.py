@@ -6,7 +6,7 @@ import socket
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import paho.mqtt.client as mqtt
 import pytest
@@ -130,13 +130,20 @@ class Publisher:
         assert self.ready.wait(10), "발행기 접속 실패"
         self.i = 0
         self.fcnt = 100000
+        self.last_ts = None
 
     def publish_one(self):
         self.ready.wait(5)
         m = self.msgs[self.i % len(self.msgs)]
         self.i += 1
         p = json.loads(m["payload"])
+        # 시각을 발행마다 최소 1ms 이상 늘린다. 같은 장치 메시지가 연달아 같은 밀리초에 나가면
+        # (장치, 항목, 시각)이 겹쳐 시험이 가끔 실패했다(2026-10-21, 12회 중 1회).
         now = datetime.now(timezone.utc)
+        now = now.replace(microsecond=now.microsecond // 1000 * 1000)
+        if self.last_ts is not None and now <= self.last_ts:
+            now = self.last_ts + timedelta(milliseconds=1)
+        self.last_ts = now
         if "rxInfo" in p:
             for rx in p["rxInfo"]:
                 rx["nsTime"] = now.isoformat()
