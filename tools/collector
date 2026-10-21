@@ -1,0 +1,5 @@
+#!/bin/sh
+# 어디서든 수집기 명령 실행: collector check | report --hours 1 | check-config ...
+# 프로젝트 폴더로 이동해 .venv의 파이썬으로 실행한다(설정·.env 상대 경로 때문).
+ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+cd "$ROOT" && exec "$ROOT/.venv/bin/python" -m collector "$@"

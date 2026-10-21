@@ -1,6 +1,6 @@
 # systemd 사용자 서비스 — deploy/install.sh가 @ROOT@를 프로젝트 경로로 바꿔 설치한다.
 [Unit]
-Description=team2 MQTT 센서 수집기 (과제 1)
+Description=wonil MQTT 센서 수집기 (과제 1)
 After=network-online.target
 Wants=network-online.target
 

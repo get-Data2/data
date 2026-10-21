@@ -19,7 +19,7 @@ _SPACE_ID = re.compile(r"^[a-z][a-z0-9_]{1,31}$")
 DEFAULTS: dict[str, dict[str, Any]] = {
     "timing": {"max_future_s": 120, "max_past_s": 3600},
     "mqtt": {"keepalive_s": 30, "reconnect_max_s": 30, "stale_reconnect_s": 300, "qos": 1,
-             "client_id": "team2-collector"},
+             "client_id": "wonil-collector"},
     "storage": {"table_prefix": "", "batch_rows": 1000, "flush_interval_s": 2},
     "spool": {"path": "var/spool.db", "max_rows": 400000},
     "report": {"stale_after_s": 600, "gap_min_minutes": 2},

@@ -21,6 +21,9 @@
 
 ## 빠른 사용 (과제 1 수집기)
 
+아래 명령은 프로젝트 폴더(`~/Desktop/project`)에서 입력한다. 어디서든 쓰려면 `.venv/bin/python -m collector` 대신 `collector`(→ `tools/collector`).
+서비스 이름은 `wonil-collector`(systemd 사용자 서비스).
+
 ```bash
 ~/.local/bin/uv pip install --python .venv/bin/python -e '.[test]'
 .venv/bin/python -m collector check-config         # 설정 검증

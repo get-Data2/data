@@ -1,6 +1,6 @@
 # 수집기 설정 — 형식 변경·센서 추가·공간 변경은 이 파일만 고친다.
 # 형식 설명: specs/001-data-collection/contracts/config.md (data-docs 저장소)
-# 반영: systemctl --user reload team2-collector  (검증 실패 시 기존 설정 유지)
+# 반영: systemctl --user reload wonil-collector  (검증 실패 시 기존 설정 유지)
 version: 1
 
 spaces:                      # 공간 매핑: id는 이후 과제의 토픽·API 경로에 쓰이므로 바꾸지 않는다

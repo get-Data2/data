@@ -103,7 +103,7 @@ def check_service(unit: str) -> tuple[bool, str]:
 
 
 def run_checks(cfg, env_path: str | Path, seconds: float = 10, skip_influx: bool = False) -> tuple[bool, str]:
-    rows = [("수집 서비스", *check_service("team2-collector.service")),
+    rows = [("수집 서비스", *check_service("wonil-collector.service")),
             ("MQTT 브로커", *check_mqtt(cfg, env_path, seconds)),
             ("MySQL", *check_mysql(env_path, cfg.storage["table_prefix"]))]
     if not skip_influx:

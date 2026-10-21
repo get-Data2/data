@@ -4,7 +4,7 @@
 #  2순위: linger를 켤 수 없으면 crontab @reboot 감시 스크립트
 set -eu
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-UNIT=team2-collector.service
+UNIT=wonil-collector.service
 UNIT_DIR="$HOME/.config/systemd/user"
 mkdir -p "$ROOT/var" "$UNIT_DIR"
 
