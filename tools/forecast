@@ -3,7 +3,7 @@
 # 프로젝트 폴더로 이동해 .venv의 파이썬으로 실행한다.
 # GPU 그룹(video·render)이 계정에는 있는데 이 프로세스에 아직 반영되지 않았으면(그룹 추가 전에 시작한 셸) sg로 다시 실행한다.
 ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
-export CUBLAS_WORKSPACE_CONFIG=:4096:8 PYTHONUNBUFFERED=1
+export CUBLAS_WORKSPACE_CONFIG=:4096:8 PYTHONUNBUFFERED=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 if [ -z "$FORECAST_SG" ] && ! id -nG | tr ' ' '\n' | grep -qx video && id -nG "$(id -un)" | tr ' ' '\n' | grep -qx video; then
   export FORECAST_SG=1
   q=""

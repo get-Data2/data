@@ -20,6 +20,11 @@ RUNS = Path("var/forecast/runs")
 REPORT_H = (1, 3, 6, 12)            # 5·15·30·60분
 ITEM_NAMES = ("co2", "temperature")
 MIN_VAL_POINTS = 100
+EVAL_BIN_BUDGET = 49152       # 평가 배치 × 과거 칸 상한. 과거 하루(288칸) × 2048은 GRU 작업 공간 2.3GB로 GPU 메모리 부족(2026-10-21)
+
+
+def eval_batch(W) -> int:
+    return max(128, min(2048, EVAL_BIN_BUDGET // W.L))
 
 
 def run_dir(exp, seed: int, root: Path = RUNS) -> Path:
@@ -38,11 +43,11 @@ def _batches(idx: np.ndarray, size: int, rng: np.random.Generator | None = None)
 
 
 @torch.no_grad()
-def predict(model, W, idx: np.ndarray, batch: int = 2048):
+def predict(model, W, idx: np.ndarray, batch: int | None = None):
     """원 단위 예측 (n, H, 2)과 정답(n, H, 2, NaN)."""
     model.eval()
     preds, ys = [], []
-    for bi in _batches(idx, batch):
+    for bi in _batches(idx, batch or eval_batch(W)):
         b = W.batch(bi)
         p = W.to_original(model(b), b)
         y = torch.where(b["mask"], W.Y[b["s"][:, None], b["t"][:, None] + torch.arange(1, W.H + 1, device=W.device)],
@@ -55,10 +60,10 @@ def predict(model, W, idx: np.ndarray, batch: int = 2048):
 
 
 @torch.no_grad()
-def eval_loss(model, W, idx, batch: int = 2048) -> float:
+def eval_loss(model, W, idx, batch: int | None = None) -> float:
     model.eval()
     tot, n = 0.0, 0
-    for bi in _batches(idx, batch):
+    for bi in _batches(idx, batch or eval_batch(W)):
         b = W.batch(bi)
         m = b["mask"].float()
         tot += float((torch.abs(model(b) - b["target"]) * m).sum())
