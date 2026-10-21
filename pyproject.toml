@@ -20,6 +20,7 @@ analysis = ["pandas>=3.0", "pyarrow>=26", "matplotlib>=3.11", "holidays>=0.107"]
 # torch는 aarch64 CUDA판을 cu130 index에서 따로 설치한다(specs/003-forecast-60min/quickstart.md)
 forecast = ["torch>=2.14"]
 pretrained = ["chronos-forecasting==2.3.2"]
+edgeopt = ["onnx>=1.23", "onnxruntime-gpu>=1.31", "tensorrt-cu13>=11.4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -37,4 +38,5 @@ markers = [
   "live: 실 MQTT 브로커 사용",
   "forecast: 실데이터로 짧게 학습(과제 3, 느림)",
   "pretrained: 실제 사전학습 가중치 사용(과제 6, 느림)",
+  "trt: 실제 TensorRT·GPU 필요(과제 7)",
 ]

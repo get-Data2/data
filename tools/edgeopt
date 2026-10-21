@@ -1,0 +1,18 @@
+#!/bin/sh
+# 어디서든 엣지 최적화 명령 실행: edgeopt probe | export | build | bench | diff | report ...
+# 프로젝트 폴더로 이동해 .venv의 파이썬으로 실행한다.
+# GPU 그룹(video·render)이 계정에는 있는데 이 프로세스에 아직 반영되지 않았으면(그룹 추가 전에 시작한 셸) sg로 다시 실행한다.
+# pip TensorRT·CUDA 공유 라이브러리 경로를 LD_LIBRARY_PATH에 넣는다(research R2 대안 1).
+ROOT=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+SP="$ROOT/.venv/lib/python3.12/site-packages"
+LIBS=""
+for d in "$SP/tensorrt_libs" "$SP"/nvidia/*/lib; do [ -d "$d" ] && LIBS="$LIBS:$d"; done
+export LD_LIBRARY_PATH="${LIBS#:}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export CUBLAS_WORKSPACE_CONFIG=:4096:8 PYTHONUNBUFFERED=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+if [ -z "$EDGEOPT_SG" ] && ! id -nG | tr ' ' '\n' | grep -qx video && id -nG "$(id -un)" | tr ' ' '\n' | grep -qx video; then
+  export EDGEOPT_SG=1
+  q=""
+  for a in "$0" "$@"; do q="$q '$(printf %s "$a" | sed "s/'/'\\\\''/g")'"; done
+  exec sg video -c "sg render -c \"$q\""
+fi
+cd "$ROOT" && exec "$ROOT/.venv/bin/python" -m edgeopt "$@"
