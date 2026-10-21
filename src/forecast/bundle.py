@@ -22,6 +22,16 @@ def input_spec(exp) -> dict:
             "notes": "x_* = (앞으로 채운 관측값 − 평균)/표준편차, age_* = 마지막 관측 뒤 시간/age_cap_h"}
 
 
+def _test_mae(ctx, sel) -> dict:
+    """서비스 자기 성능 감시 기준: 최종 모델 시험 MAE(씨앗 평균) {"공간/항목/지평": MAE}."""
+    from .evaluate import load_test_preds, mae_by_cell
+    df = load_test_preds(ctx, sel, "final").get(sel["final_label"])
+    if df is None:
+        return {}
+    t = mae_by_cell(df, "all", 0)
+    return {f"{r.space_id}/{r.item}/{r.horizon_min}": round(float(r.mae), 4) for r in t.itertuples() if r.mae == r.mae}
+
+
 def save_bundle(ctx, sel, log=print):
     out = ctx.root / "bundle"
     out.mkdir(parents=True, exist_ok=True)
@@ -38,7 +48,8 @@ def save_bundle(ctx, sel, log=print):
                      for si, s in enumerate(ctx.cfg["spaces"])},
             "age_cap_h": ctx.cfg["age_cap_h"], "input_spec": input_spec(exp), "model_sha256": run["model_sha256"],
             "data": {k: run.get(k) for k in ("split", "eval_sha256", "series_sha16", "norm_sha16")},
-            "selection_sha256": sel["sha256"], "schedule_source": "config/analysis.yaml schedule"}
+            "selection_sha256": sel["sha256"], "schedule_source": "config/analysis.yaml schedule",
+            "config_hash": exp.hash, "test_mae": _test_mae(ctx, sel)}
     (out / "bundle.json").write_text(json.dumps(body, ensure_ascii=False, indent=1))
     log(f"모델 묶음 → {out} ({exp.label()} s{r['seed']})")
     return out

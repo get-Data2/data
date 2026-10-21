@@ -45,6 +45,15 @@ def test_full_flow_and_gates(work):
     from anomaly.report import write_reports
     b = save_bundle(work, log)
     assert (b / "bundle.json").exists() and list(b.glob("ae_*.pt"))
+    # 과제 8 진입점: 서비스가 넘기는 센서 5분 표(평가판 마지막 2시간)로 판정
+    from types import SimpleNamespace
+    from anomaly.serve import load as serve_load
+    svc = serve_load(b, "cpu")
+    t0 = pd.Timestamp(work.cfg.split.utc("test")[0]) + pd.Timedelta(days=2)
+    sens = work.sensor[(work.sensor["bin"] > t0 - pd.Timedelta(hours=2)) & (work.sensor["bin"] <= t0)]
+    out = svc.predict(SimpleNamespace(sensor=sens, t0_bin=t0))
+    assert set(out) == set(work.cfg.spaces)
+    assert all(0 <= v["score_q"] <= 1 and v["causes"] for v in out.values())
     files = write_reports(work, work.root / "deliv", work.root / "adv")
     assert len(files) >= 4 and all(f.read_text().startswith("# 과제 4") for f in files)
     # 임계값 누수 없음: 평가판 점수를 망가뜨리고 다시 정해도 같다

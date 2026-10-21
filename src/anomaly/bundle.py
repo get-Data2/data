@@ -34,6 +34,7 @@ def save_bundle(work, log=print):
                          "colnorm": np.load(work.root / "models" / f"{space}-s{seed}-colnorm.npy").tolist(),
                          "score_quantiles": np.quantile(ref, qs).tolist() if len(ref) else []}
     body = {"created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "input_spec_version": INPUT_SPEC_VERSION,
+            "input_spec": {"version": INPUT_SPEC_VERSION}, "service_entry": "anomaly.serve:load",
             "config": work.cfg.digest, "window": a["window"], "score_tail": a["score_tail"], "channels": a["channels"],
             "bottleneck": a["bottleneck"], "spaces": spaces,
             "thresholds": {d: v["threshold_q"] for d, v in thr["detectors"].items()}, "thresholds_sha256": thr["sha256"],

@@ -299,7 +299,8 @@ def save_bundle(cfg, data: Data, sel: dict) -> Path:
     import joblib
     out = data.root / "bundle"
     out.mkdir(parents=True, exist_ok=True)
-    body = {"input_spec_version": INPUT_SPEC_VERSION, "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    body = {"input_spec_version": INPUT_SPEC_VERSION, "input_spec": {"version": INPUT_SPEC_VERSION},
+            "service_entry": "state.serve:load", "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "selection_sha256": sel["sha256"], "config": cfg.digest, "spaces": cfg.spaces,
             "feature_window_min": cfg["features"]["window_min"], "min_input_obs": cfg["features"]["min_input_obs"],
             "norm": {s: {it: {"mean": v["mean"], "std": v["std"]} for it, v in data.norm["spaces"][s].items()}

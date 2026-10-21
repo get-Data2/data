@@ -61,6 +61,14 @@ def test_gate_flow_bundle_and_leakage(scfg, tmp_path):
     b = load_bundle(tmp_path / "a" / "bundle")
     assert b["input_spec_version"] == 1 and set(b["problems"]) == {"occupancy", "vent"}
     assert not [c for c in b["problems"]["occupancy"]["features"] if c.startswith(("t_", "sch_"))]
+    # 과제 8 진입점: 서비스가 넘기는 공간 5분 표로 판정
+    from types import SimpleNamespace
+    from state.serve import load as serve_load
+    svc = serve_load(tmp_path / "a" / "bundle")
+    t0 = pd.Timestamp("2026-03-25 03:00", tz="UTC")
+    win = s1[(s1["bin"] > t0 - pd.Timedelta(hours=2)) & (s1["bin"] <= t0)]
+    out = svc.predict(SimpleNamespace(space=win, t0_bin=t0))
+    assert "lab" in out and 0 <= out["lab"]["p_occupied"] <= 1 and isinstance(out["lab"]["ventilation_soon"], bool)
     run_analyze(scfg, d1, QUIET)
     from state.report import write_reports
     files = write_reports(scfg, tmp_path / "a", tmp_path / "deliv", tmp_path / "adv")
