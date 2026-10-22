@@ -55,3 +55,27 @@ def test_parse_annotated_csv_multiple_tables():
             ",result,table,_time,_value,device_id\n,,1,2025-09-10T00:00:00Z,3,d\n\n")
     rows = parse_csv(text)
     assert [r["_value"] for r in rows] == ["1", "2", "3"] and rows[2]["device_id"] == "d"
+
+
+def test_attach_field_tags_untagged_period(config):
+    """2025-08-13~09-03: location·point가 값과 같은 시각의 필드 행으로만 있다 → (항목, 시각)으로 묶어 장치 추론."""
+    from collector.backfill import attach_field_tags
+    t, t2 = "2025-08-20T03:00:46.112Z", "2025-08-20T03:00:50.179Z"
+    vals = [row(device_id="", location="", point="", _time=t), row(device_id="", location="", point="", _time=t2),
+            row(device_id="", location="", point="", _time="2025-08-20T03:09:00Z")]
+    fields = [{"_measurement": "co2", "_time": t, "_field": "location", "_value": "사무실"},
+              {"_measurement": "co2", "_time": t, "_field": "point", "_value": "업무 공간 안쪽"},
+              # 같은 시각에 장치 두 대 → 모호, 붙이지 않음
+              {"_measurement": "co2", "_time": t2, "_field": "location", "_value": "실습실"},
+              {"_measurement": "co2", "_time": t2, "_field": "location", "_value": "사무실"}]
+    assert attach_field_tags(vals, fields) == 1
+    infer = infer_table([row()])
+    assert convert(vals[0], config, infer)[0]["device_id"] == "24e124725d081175"
+    assert convert(vals[1], config, infer)[2] == "장치 특정 불가"
+    assert convert(vals[2], config, infer)[2] == "장치 특정 불가"
+
+
+def test_infer_location_only(config):
+    """회의실 센서는 point 없이 location만 있다. location이 비면 추론하지 않는다."""
+    t = infer_table([row(device_id="24e124725d089152", location="회의실", point=""), row(device_id="x", location="", point="")])
+    assert t == {("회의실", ""): "24e124725d089152"}

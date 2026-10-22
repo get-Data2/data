@@ -44,6 +44,35 @@ def flux_chunk(bucket: str, cfg, start: datetime, stop: datetime) -> str:
             f'|> keep(columns:["_time","_value","_measurement","device_id","location","point","spot"]) |> group()')
 
 
+def flux_untagged_fields(bucket: str, cfg, start: datetime, stop: datetime) -> str:
+    """초기(2025-08-13~09-03) 행은 location·point가 태그가 아니라 필드로 들어 있다(값과 같은 시각의 별도 필드 행).
+    그 필드를 (측정 항목, 시각)으로 묶어 장치 추론에 쓴다."""
+    return (f'from(bucket:"{bucket}") |> range(start: {start.strftime("%Y-%m-%dT%H:%M:%SZ")}, '
+            f'stop: {stop.strftime("%Y-%m-%dT%H:%M:%S.%fZ")}) '
+            f'|> filter(fn:(r)=> ({_flt(cfg)}) and (r._field=="location" or r._field=="point") '
+            f'and not exists r.device_id) '
+            f'|> keep(columns:["_time","_measurement","_field","_value"]) |> group()')
+
+
+def attach_field_tags(rows: list[dict], field_rows: list[dict]) -> int:
+    """태그 없는 값 행에 같은 (측정 항목, 시각)의 location·point 필드를 붙인다. 붙인 행 수.
+    같은 시각에 서로 다른 값이 둘 이상이면(장치 두 대가 같은 ms에 보고) 모호하므로 붙이지 않는다."""
+    fields: dict[tuple[str, str], dict[str, set]] = {}
+    for f in field_rows:
+        fields.setdefault((f["_measurement"], f["_time"]), {}).setdefault(f["_field"], set()).add(f.get("_value") or "")
+    n = 0
+    for r in rows:
+        if r.get("device_id") or r.get("location"):
+            continue
+        fs = fields.get((r.get("_measurement"), r.get("_time")))
+        if not fs or any(len(v) > 1 for v in fs.values()):
+            continue
+        r["location"] = next(iter(fs.get("location", {""})))
+        r["point"] = next(iter(fs.get("point", {""})))
+        n += 1
+    return n
+
+
 def chunk_file(start: datetime) -> str:
     return f"chunk_{start.strftime('%Y%m%dT%H%M%SZ')}.csv"
 
@@ -62,11 +91,12 @@ def plan_chunks(cfg, progress: dict, start: datetime, end: datetime) -> list[tup
 
 
 def infer_table(rows: list[dict]) -> dict[tuple[str, str], str]:
-    """(location, point) → device_id. 둘 이상의 장치가 같은 조합을 쓰면 특정할 수 없으므로 뺀다."""
+    """(location, point) → device_id. 둘 이상의 장치가 같은 조합을 쓰면 특정할 수 없으므로 뺀다.
+    point가 빈 조합도 쓴다(회의실 센서는 point 없이 location만 있다). location이 비면 쓰지 않는다."""
     seen: dict[tuple[str, str], set[str]] = {}
     for r in rows:
-        dev, loc, pt = r.get("device_id"), r.get("location"), r.get("point")
-        if dev and loc and pt:
+        dev, loc, pt = r.get("device_id"), r.get("location"), r.get("point") or ""
+        if dev and loc:
             seen.setdefault((loc, pt), set()).add(dev)
     return {k: next(iter(v)) for k, v in seen.items() if len(v) == 1}
 
@@ -76,7 +106,7 @@ def convert(r: dict, cfg, infer: dict) -> tuple[dict | None, dict | None, str | 
     dev = r.get("device_id") or None
     loc, pt, spot = r.get("location") or None, r.get("point") or None, r.get("spot") or None
     if not dev:
-        dev = infer.get((loc, pt)) if loc and pt else None
+        dev = infer.get((loc, pt or "")) if loc else None
         if not dev:
             return None, None, "장치 특정 불가"
     ov = cfg.devices.get(dev)
@@ -146,6 +176,13 @@ class Backfill:
 
     def load_chunk(self, start: datetime, stop: datetime, infer: dict) -> dict:
         rows = self.reader.query(flux_chunk(self.reader.bucket, self.cfg, start, stop))
+        if any(not r.get("device_id") and not r.get("location") for r in rows):
+            try:
+                fr = self.reader.query(flux_untagged_fields(self.reader.bucket, self.cfg, start, stop))
+            except Exception as e:  # 맥 CSV(FileReader)에는 이 조회 파일이 없다 — 이전처럼 건너뜀으로 남긴다
+                log.warning("필드형 location·point 조회 실패(%s) — 태그 없는 행은 건너뜀", type(e).__name__)
+            else:
+                log.info("태그 없는 행에 필드형 location·point %d건 연결", attach_field_tags(rows, fr))
         skipped: Counter = Counter()
         meas, devs = [], {}
         for r in rows:

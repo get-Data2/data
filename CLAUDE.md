@@ -47,7 +47,7 @@
   보호 훅은 이름에 `README.md`가 든 셸 쓰기 명령을 막으므로 이 파일들은 Write/Edit 도구로 고친다.
 
 ## 진행 상황
-- [x] 과제 1 데이터 수집 체계 — 완료·상시 수집 중(2026-10-20 16:33~). 24h 최종 커버율 최저 98.6%(2026-10-21). InfluxDB 90일 적재 완료(2026-10-21 17:44). 남은 것: 장치 미특정 75만 행(선택). 유선이 없으면 맥 CSV 경로(`collector influx-export-script` → `backfill --from-dir`). 연결 점검 `collector check`. 수집기 정지 등 실시간 빈틈은 `collector fill-gaps --days 2`(InfluxDB에서 빈틈 안쪽만, ±2초 중복 제외. xflow는 복구 불가)
+- [x] 과제 1 데이터 수집 체계 — 완료·상시 수집 중(2026-10-20 16:33~). 24h 최종 커버율 최저 98.6%(2026-10-21). InfluxDB 90일 적재 완료(2026-10-21 17:44). 장치 미특정 75만 행 중 61만 행 복원(2026-10-22, 이 기간 location·point가 필드로 저장 → `attach_field_tags`). 08-14 오후~08-17 14만 행은 장치 정보 없음(복원 불가). 합계 1,456만 행. 유선이 없으면 맥 CSV 경로(`collector influx-export-script` → `backfill --from-dir`). 연결 점검 `collector check`. 수집기 정지 등 실시간 빈틈은 `collector fill-gaps --days 2`(InfluxDB에서 빈틈 안쪽만, ±2초 중복 제외. xflow는 복구 불가)
 - [x] 과제 2 데이터 이해와 기준선 — 완료(2026-10-21). 분할 `v1-provisional`이 과제 3~6 공식 평가 기준(`var/eval/eval_points_v1-provisional.parquet`).
   `v2-final`(2학기 시험)은 InfluxDB 적재 후 추가 비교(선택). 산출물 `docs/deliverables/task2/`, 점검 `docs/tasks/task2-data-baseline.md`
 - [x] 과제 3 60분 예측 — 완료(2026-10-21). 최종 GRU 2h(`var/forecast/bundle`, 해시 `52aff4f0c4bf`), 실습실 CO₂ 60분 53% 개선. GPU 학습은 `tools/forecast`(sg 래퍼). 점검 `docs/tasks/task3-forecast-60min.md`
