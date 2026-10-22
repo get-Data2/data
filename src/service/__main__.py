@@ -22,8 +22,12 @@ from .config import ServiceConfigError, load_service_config
 EXIT_CONFIG, EXIT_NOSERVICE, EXIT_DATA = 2, 3, 4
 
 
-def _device(args):
+def _device(args, cfg=None):
     from forecast.env import pick_device
+    if args.device == "auto" and cfg is not None:
+        from .bundles import prefers_cpu
+        if prefers_cpu(cfg):   # 과제 7: ONNX Runtime CPU 선택 → GPU를 쓰지 않는다
+            return pick_device("cpu")
     return pick_device(args.device)
 
 
@@ -31,7 +35,7 @@ def _service(args, cfg, publisher=None, writer=None):
     from .loop import Service
     from .records import Recorder
     from .window import DbSource
-    return Service(cfg, DbSource(cfg), _device(args), publisher=publisher, recorder=Recorder(cfg, writer))
+    return Service(cfg, DbSource(cfg), _device(args, cfg), publisher=publisher, recorder=Recorder(cfg, writer))
 
 
 def cmd_once(args, cfg):

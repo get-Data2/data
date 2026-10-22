@@ -98,3 +98,31 @@ def test_records_written(scfg, raw):
     svc.step(now=at("10:03:20"))
     cyc = svc.rec.read("cycle")
     assert len(cyc) == 1 and {"read_ms", "prep_ms", "infer_ms", "total_ms", "rss_mb"} <= set(cyc[0])
+
+
+def test_data_gap_skips_power_only_device():
+    """꺼진 냉난방 실내기는 power만 매분 보내고 온도는 켤 때만 보낸다(periodic_items: [power]).
+    서비스는 온도·CO₂·습도만 읽으므로 이 장치의 끊김은 판정하지 않는다(2026-10-22 사무실 실내기 오경보)."""
+    from analysis.config import AnalysisConfig
+    from service import rules
+    acfg = AnalysisConfig("x", {}, {}, periodic_items={"idu": ("power",), "both": ("power", "temperature")})
+    now = pd.Timestamp("2026-10-22T00:00:00Z")
+    raw = pd.DataFrame({"ts": [now - pd.Timedelta(hours=3)] * 3, "space_id": ["office"] * 3,
+                        "device_id": ["idu", "both", "sensor"], "item": ["temperature"] * 3, "value": [20.0] * 3})
+    out = rules.data_gap(raw, now, acfg, {}, 10)
+    assert sorted(o["device_id"] for o in out) == ["both", "sensor"]
+
+
+def test_ort_selection_falls_back(tmp_path):
+    """과제 7 선택(ort_cpu)이어도 ONNX가 다른 가중치에서 만들어졌거나 파일이 없으면 PyTorch로 돈다."""
+    from service.bundles import ort_forecast_path, prefers_cpu
+    sel = tmp_path / "runtime.json"
+    cfg = {"bundles": {"edge_selection": str(sel)}}
+    assert ort_forecast_path(cfg, "abc")[0] is None and not prefers_cpu(cfg)
+    sel.write_text(json.dumps({"runner": "ort_cpu", "models": {"forecast_final": {
+        "file": "f.onnx", "sha256": "x", "source_weights_sha256": "other"}}}))
+    assert prefers_cpu(cfg)
+    path, why = ort_forecast_path(cfg, "abc")
+    assert path is None and "다른 가중치" in why
+    path, why = ort_forecast_path(cfg, "other")
+    assert path is None and "파일 없음" in why

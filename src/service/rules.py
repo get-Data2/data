@@ -4,14 +4,16 @@ from __future__ import annotations
 import pandas as pd
 
 
-def data_gap(raw: pd.DataFrame, now: pd.Timestamp, acfg, known: dict[str, str], gap_min: float) -> list[dict]:
-    """마지막 수신이 max(gap_min, 기대 주기 × 2)보다 오래된 주기형 장치. known: 서비스가 본 적 있는 장치 → 공간."""
+def data_gap(raw: pd.DataFrame, now: pd.Timestamp, acfg, known: dict[str, str], gap_min: float,
+             items=("co2", "temperature", "humidity")) -> list[dict]:
+    """마지막 수신이 max(gap_min, 기대 주기 × 2)보다 오래된 주기형 장치. known: 서비스가 본 적 있는 장치 → 공간.
+    items: raw에 든 항목. 이 항목을 주기적으로 보내지 않는 장치(꺼지면 power만 보내는 냉난방 실내기)는 판정하지 않는다."""
     last = raw.groupby("device_id")["ts"].max() if len(raw) else pd.Series(dtype="datetime64[ns, UTC]")
     for dev, sp in raw.groupby("device_id")["space_id"].last().items() if len(raw) else []:
         known[str(dev)] = str(sp)
     out = []
     for dev, space in known.items():
-        if not acfg.is_periodic(dev):
+        if not acfg.is_periodic_in(dev, items):
             continue
         limit = max(gap_min, 2 * acfg.period_s(dev) / 60)
         seen = last.get(dev)

@@ -43,6 +43,7 @@ class AnalysisConfig:
     periods: dict[str, int] = field(default_factory=dict)      # 장치 → 기대 주기(초), 과제 1 설정
     periodic: dict[str, bool] = field(default_factory=dict)    # 장치 → 주기형 여부
     digest: str = ""
+    periodic_items: dict[str, tuple] = field(default_factory=dict)   # 장치 → 주기적으로 보내는 항목(나머지는 조건부)
 
     def __getitem__(self, k):
         return self.raw[k]
@@ -58,6 +59,13 @@ class AnalysisConfig:
 
     def is_periodic(self, device_id: str) -> bool:
         return self.periodic.get(device_id, True)
+
+    def is_periodic_in(self, device_id: str, items) -> bool:
+        """주어진 항목 중 하나라도 주기적으로 보내는 장치인가(periodic_items가 없으면 모든 항목)."""
+        if not self.is_periodic(device_id):
+            return False
+        pi = self.periodic_items.get(device_id)
+        return pi is None or bool(set(pi) & set(items))
 
 
 def _d(s, where, errs):
@@ -115,7 +123,7 @@ def load_analysis_config(path: str | Path = "config/analysis.yaml",
     if errs:
         raise AnalysisConfigError(path, errs)
 
-    periods, periodic = {}, {}
+    periods, periodic, periodic_items = {}, {}, {}
     if collector_config and Path(collector_config).exists():
         cc = yaml.safe_load(Path(collector_config).read_text(encoding="utf-8")) or {}
         for dev, d in (cc.get("devices") or {}).items():
@@ -124,7 +132,9 @@ def load_analysis_config(path: str | Path = "config/analysis.yaml",
                 periods[str(dev)] = int(d["expected_period_s"])
             if d.get("periodic") is False:
                 periodic[str(dev)] = False
+            if d.get("periodic_items"):
+                periodic_items[str(dev)] = tuple(d["periodic_items"])
     # 보고서 위치·글꼴(report)은 결과 값에 영향이 없으므로 규칙 버전(해시)에서 뺀다
     rules = {k: v for k, v in raw.items() if k != "report"}
     digest = hashlib.sha256(json.dumps(rules, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()[:12]
-    return AnalysisConfig(str(path), raw, splits, periods, periodic, digest)
+    return AnalysisConfig(str(path), raw, splits, periods, periodic, digest, periodic_items)

@@ -34,6 +34,9 @@ devices:                     # 장치 단위 덮어쓰기(태그가 틀리거나
   # 냉난방 실내기(xflow idu)는 꺼져 있으면 power만 매분 보내고, 켜져 있을 때만 온도·설정 온도 등을 보낸다(2026-10-21 실측:
   # 집중회의실 실내기 24시간 power 1,441건, 온도는 13:06 잠깐 켰을 때 1건) → 온도 등은 조건부 항목, 커버율 판정 제외
   8b519f28-d521-4a7a-a9d3-874bee333d3e: {periodic_items: [power]}   # 집중회의실 실내기
+  # 같은 실내기(2026-10-22 실측 24시간: power 1,42x건, 온도 0~3건). 과제 8 서비스가 온도만 보고 끊김 경보를 낸 오경보의 원인
+  f9a54140-d10d-4a0b-84f4-2bc6dccba775: {periodic_items: [power]}   # 사무실 실내기
+  92d0a511-0639-403e-b9ac-7b6048ec10c7: {periodic_items: [power]}   # 회의실 실내기
   # 24e124xxxxxxxxxx: {expected_period_s: 600}
   # 24e124yyyyyyyyyy: {enabled: false}
 
